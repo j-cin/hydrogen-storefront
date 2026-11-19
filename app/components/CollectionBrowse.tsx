@@ -642,7 +642,7 @@ export function FilterDrawer({
   return (
     <dialog
       id={id}
-      className="drawer-left bg-surface text-on-surface"
+      className="drawer-left bg-surface-raised text-on-surface"
       aria-labelledby="filter-drawer-title"
       closedby="any"
     >

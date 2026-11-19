@@ -15,7 +15,7 @@ export function AnnouncementBar({ nextRoastDate }: { nextRoastDate: string }) {
       content: (
         <>
           Next roast:{" "}
-          <time dateTime={nextRoastDate} className="font-mono text-[13px]">
+          <time dateTime={nextRoastDate} className="type-stamp">
             {formatRoastDate(nextRoastDate)}
           </time>
           . Order by Sunday night to get beans from this batch.

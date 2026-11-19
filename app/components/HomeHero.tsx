@@ -28,7 +28,7 @@ export function HomeHero({ hero }: { hero: HomeHeroData }) {
           </>
         ) : null}
         <div
-          className={`max-w-page px-margin relative z-10 mx-auto flex flex-col items-start justify-end ${image ? "text-interactive-text min-h-hero p-8 pb-12" : "text-on-surface py-16 md:py-20"}`}
+          className={`max-w-page px-margin relative z-10 mx-auto flex flex-col items-start justify-end ${image ? "text-on-image min-h-hero p-8 pb-12" : "text-on-surface py-16 md:py-20"}`}
         >
           <h1 id="hero-heading" className="type-display max-w-2xl wrap-anywhere">
             Hello {hero.heading}

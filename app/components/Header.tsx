@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Link } from "react-router";
 
 import { useCart } from "~/lib/cart";
@@ -6,6 +5,7 @@ import { CART_DRAWER_ID, SEARCH_DRAWER_ID, openDialogFromLinkClick } from "~/lib
 import type { NavItem } from "~/lib/menu";
 import type { StorefrontShop } from "~/lib/storefront-shop";
 
+import { Logo } from "./Logo";
 import { NavLink } from "./NavLink";
 import { MobileNav, MobileNavTrigger } from "./MobileNav";
 
@@ -31,12 +31,10 @@ export const FALLBACK_MENU: NavItem[] = [
   { id: "fallback-journal", title: "Journal", to: "/blogs/journal", external: false, items: [] },
 ];
 
-export function Header({ shopInfo, menu }: { shopInfo: StorefrontShop; menu: NavItem[] }) {
+export function Header({ menu }: { shopInfo: StorefrontShop; menu: NavItem[] }) {
   const items = menu.length > 0 ? menu : FALLBACK_MENU;
 
   const totalQuantity = useCart((state) => state.data.totalQuantity);
-  const [failedLogoUrl, setFailedLogoUrl] = useState<string | null>(null);
-  const logo = shopInfo.logo;
 
   return (
     <header className="border-border bg-surface sticky top-0 z-40 border-b">
@@ -50,26 +48,10 @@ export function Header({ shopInfo, menu }: { shopInfo: StorefrontShop; menu: Nav
           </div>
           <Link
             to="/"
-            aria-label={shopInfo.name}
-            title={shopInfo.name}
-            className="text-on-surface focus-visible:outline-accent inline-flex max-w-48 min-w-0 items-center rounded-sm text-lg font-medium no-underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+            aria-label="Morrow Coffee Roasters home"
+            className="text-on-surface focus-visible:outline-accent inline-flex min-w-0 items-center rounded-sm pt-1 no-underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4"
           >
-            {logo && failedLogoUrl !== logo.url ? (
-              <img
-                src={logo.url}
-                alt={logo.altText ?? shopInfo.name}
-                width={logo.width ?? undefined}
-                height={logo.height ?? undefined}
-                className="h-auto max-h-10 w-auto max-w-full object-contain"
-                // An SSR image can fail before hydration attaches onError, so also check on mount.
-                ref={(img) => {
-                  if (img?.complete && img.naturalWidth === 0) setFailedLogoUrl(logo.url);
-                }}
-                onError={() => setFailedLogoUrl(logo.url)}
-              />
-            ) : (
-              <span className="line-clamp-2 leading-tight wrap-anywhere">{shopInfo.name}</span>
-            )}
+            <Logo className="text-[1.75rem]" />
           </Link>
         </div>
 

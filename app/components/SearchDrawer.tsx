@@ -36,7 +36,7 @@ function SearchDialog() {
   return (
     <dialog
       id={SEARCH_DRAWER_ID}
-      className="drawer-right bg-surface text-on-surface"
+      className="drawer-right bg-surface-raised text-on-surface"
       aria-labelledby={TITLE_ID}
       data-testid="search-drawer"
       closedby="any"

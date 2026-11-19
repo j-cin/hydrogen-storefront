@@ -3,6 +3,7 @@ import { Link } from "react-router";
 import type { NavItem } from "~/lib/menu";
 import type { StorefrontShop } from "~/lib/storefront-shop";
 
+import { Logo } from "./Logo";
 import { NavLink } from "./NavLink";
 import { PaymentMethodIcon } from "./PaymentMethodIcon";
 
@@ -16,7 +17,12 @@ export function Footer({ shopInfo, menu }: { shopInfo: StorefrontShop; menu: Nav
         className={`border-border grid grid-cols-1 gap-8 border-t py-12 text-sm md:grid-cols-2 ${shopInfo.paymentMethods.length > 0 ? "lg:grid-cols-3" : ""}`}
       >
         <div className="min-w-0 wrap-anywhere">
-          <h2 className="type-body-sm text-on-surface mb-4 font-medium">{shopInfo.name}</h2>
+          <h2 className="text-on-surface mb-3">
+            <Logo className="text-[2rem]" />
+          </h2>
+          <p className="text-on-surface-secondary max-w-xs">
+            Roasted on Monday. In your cup by Thursday.
+          </p>
         </div>
         <nav aria-labelledby="footer-customer-care-heading">
           <h2

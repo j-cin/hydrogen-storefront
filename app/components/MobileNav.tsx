@@ -10,7 +10,7 @@ export function MobileNav({ items }: { items: NavItem[] }) {
   return (
     <dialog
       id={MOBILE_NAV_DRAWER_ID}
-      className="drawer-left bg-surface text-on-surface"
+      className="drawer-left bg-surface-raised text-on-surface"
       aria-labelledby="mobile-nav-title"
       data-testid="mobile-nav"
       closedby="any"

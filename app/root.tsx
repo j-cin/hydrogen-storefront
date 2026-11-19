@@ -37,7 +37,14 @@ import type { Route } from "./+types/root";
 
 import appStylesHref from "./app.css?url";
 
+// Morrow type: Fraunces (headings), Inter (body/UI), JetBrains Mono (roast dates, SKUs).
+const GOOGLE_FONTS_HREF =
+  "https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Inter:wght@400;600&family=JetBrains+Mono:wght@400&display=swap";
+
 export const links: Route.LinksFunction = () => [
+  { rel: "preconnect", href: "https://fonts.googleapis.com" },
+  { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
+  { rel: "stylesheet", href: GOOGLE_FONTS_HREF },
   { rel: "stylesheet", href: appStylesHref },
   { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
 ];

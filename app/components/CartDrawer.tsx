@@ -302,7 +302,7 @@ export function CartDrawer() {
       </span>
       <dialog
         id={CART_DRAWER_ID}
-        className="drawer-right bg-surface text-on-surface"
+        className="drawer-right bg-surface-raised text-on-surface"
         aria-labelledby="cart-drawer-title"
         data-testid="cart-drawer"
         closedby="any"

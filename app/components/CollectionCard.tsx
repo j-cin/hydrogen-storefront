@@ -97,7 +97,7 @@ export function CollectionCard({
         ) : null}
       </div>
       <div className="overlay-dark pointer-events-none absolute inset-0" />
-      <div className="text-interactive-text absolute inset-x-0 bottom-0 z-10 p-4 text-left">
+      <div className="text-on-image absolute inset-x-0 bottom-0 z-10 p-4 text-left">
         <h3 className="type-body-lg font-medium">{collection.title}</h3>
         <p className="type-body-sm mt-0.5 opacity-80">
           {productCountText(collection, productCount)}

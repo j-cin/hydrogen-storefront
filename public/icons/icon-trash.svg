@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="var(--icon-stroke-width)" stroke-linecap="round" stroke-linejoin="round">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" stroke="#2B1E16" stroke-width="var(--icon-stroke-width)" stroke-linecap="round" stroke-linejoin="round">
   <g class="remove-icon-top">
     <polyline points="2.5 5 4.17 5 17.5 5"/>
     <path d="M7.5 5V3.33a.83.83 0 0 1 .83-.83h3.34a.83.83 0 0 1 .83.83V5"/>

@@ -97,7 +97,7 @@ export default function BrewRoute({ loaderData }: Route.ComponentProps) {
                 <article
                   id={guide.handle}
                   aria-labelledby={`${guide.handle}-title`}
-                  className="border-border rounded-card h-full scroll-mt-24 border p-6"
+                  className="border-border bg-surface-raised rounded-card h-full scroll-mt-24 border p-6"
                 >
                   {guide.method ? (
                     <p className="type-overline text-on-surface-secondary mb-1">{guide.method}</p>
@@ -110,7 +110,7 @@ export default function BrewRoute({ loaderData }: Route.ComponentProps) {
                       {guide.recipe.map((item) => (
                         <div key={item.label}>
                           <dt className="text-on-surface-secondary text-sm">{item.label}</dt>
-                          <dd className="text-on-surface font-mono text-[13px]">{item.value}</dd>
+                          <dd className="text-on-surface type-stamp">{item.value}</dd>
                         </div>
                       ))}
                     </dl>
