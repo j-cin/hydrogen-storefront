@@ -292,6 +292,10 @@ function galleryDotClass(active: boolean) {
   return "bg-on-surface/30 size-2 rounded-full";
 }
 
+function isWide(image: { width?: number | null; height?: number | null }) {
+  return Boolean(image.width && image.height && image.width / image.height > 1.2);
+}
+
 function ProductGallery({
   product,
   selectedVariant,
@@ -315,7 +319,7 @@ function ProductGallery({
       >
         <div
           data-product-gallery-track
-          className="flex snap-x snap-mandatory overflow-x-auto md:grid md:grid-cols-2 md:overflow-visible"
+          className="flex snap-x snap-mandatory overflow-x-auto md:grid md:grid-cols-2 md:gap-2 md:overflow-visible"
           style={{ scrollbarWidth: "none" }}
           tabIndex={0}
           onScroll={(event) => {
@@ -331,15 +335,17 @@ function ProductGallery({
               role="group"
               aria-roledescription="slide"
               aria-label={`Slide ${index + 1} of ${images.length}`}
-              className="w-full shrink-0 snap-center contain-paint md:w-auto md:shrink"
+              // The lead image spans the whole gallery; extra images sit two-up below it.
+              className={`w-full shrink-0 snap-center contain-paint md:w-auto md:shrink ${index === 0 ? "md:col-span-2" : ""}`}
             >
-              <div className="bg-surface-secondary aspect-square overflow-hidden">
+              <div className="bg-surface-secondary aspect-square overflow-hidden md:rounded-card">
                 <img
                   src={image.url}
                   alt={image.altText ?? product.title}
                   width={image.width ?? undefined}
                   height={image.height ?? undefined}
-                  className="h-full w-full object-cover"
+                  // Wide photos would lose their edges in the square frame, so fit them instead.
+                  className={`h-full w-full ${isWide(image) ? "object-contain" : "object-cover"}`}
                   loading={index === 0 ? "eager" : "lazy"}
                   fetchPriority={index === 0 ? "high" : "auto"}
                   data-testid={index === 0 ? "product-gallery-image" : undefined}
@@ -457,6 +463,11 @@ function VariantOptions({ product }: { product: ProductData }) {
   const swatches = useMemo(() => buildSwatchLookup(product), [product]);
   const location = useLocation();
   const baseParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
+
+  // Single-variant products only have Shopify's placeholder "Title: Default Title".
+  const isSingleVariant =
+    options.length === 1 && options[0]?.values.length === 1 && options[0].name === "Title";
+  if (isSingleVariant) return null;
 
   return (
     <div className="swatch-buttons space-y-4">
