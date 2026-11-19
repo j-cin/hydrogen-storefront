@@ -1,6 +1,6 @@
 // Morrow roasts once a week, on Monday, in Melbourne. The next roast date is the
 // coming Monday (today, if today is Monday) in the roastery's timezone. Merchants
-// can override it with a `morrow.next_roast_date` shop metafield (type: date),
+// can override it with a `custom.next_roast_date` shop metafield (type: date),
 // for example around public holidays.
 
 export const ROASTERY_TIME_ZONE = "Australia/Melbourne";
@@ -30,10 +30,10 @@ export function getNextRoastDate(now: Date, override?: string | null): string {
   return date.toISOString().slice(0, 10);
 }
 
-/** "Mon 23 Nov" — formatted from a YYYY-MM-DD date without timezone drift. */
+/** "Monday 23 Nov" — formatted from a YYYY-MM-DD date without timezone drift. */
 export function formatRoastDate(isoDate: string): string {
   return new Intl.DateTimeFormat("en-AU", {
-    weekday: "short",
+    weekday: "long",
     day: "numeric",
     month: "short",
     timeZone: "UTC",

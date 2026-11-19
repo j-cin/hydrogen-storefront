@@ -30,7 +30,7 @@ export const ROOT_LAYOUT_QUERY = gql(`
       }
       # Optional override for the computed Monday roast (a date metafield with
       # Storefront access). Null when the definition doesn't exist.
-      nextRoastDate: metafield(namespace: "morrow", key: "next_roast_date") {
+      nextRoastDate: metafield(namespace: "custom", key: "next_roast_date") {
         value
       }
     }
