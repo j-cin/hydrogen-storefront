@@ -1,5 +1,9 @@
 # Shopify Hydrogen development
 
+## Brand
+
+This storefront is for **Morrow Coffee Roasters** (fictional). Follow [BRAND.md](BRAND.md) for all design, UI and copy work: colour tokens, typography, logo, imagery and voice. Read it before building or restyling any component.
+
 This storefront is scaffolded from Shopify's Hydrogen React Router template. See the README for framework-specific details.
 
 Use the [Shopify AI Toolkit](https://shopify.dev/docs/apps/build/ai-toolkit) for all Shopify API and platform work. If missing, install it in the agent host per that page (or `npx skills add Shopify/shopify-ai-toolkit --list` for skill-compatible hosts).

@@ -104,6 +104,9 @@ export async function loader({ context, request }: Route.LoaderArgs) {
     shopInfo: layout.shopInfo,
     shopIdentity: resolveShopIdentity(env, layout.shopId),
     currency: layout.currency,
+    mainMenu: layout.mainMenu,
+    footerMenu: layout.footerMenu,
+    nextRoastDate: layout.nextRoastDate,
   };
 }
 
@@ -151,10 +154,10 @@ export default function App({ loaderData }: Route.ComponentProps) {
     <CartProvider initialData={loaderData.cartData}>
       <PageViewedTracker />
       <CartAnalyticsTracker />
-      <AnnouncementBar />
-      <Header shopInfo={loaderData.shopInfo} />
+      <AnnouncementBar nextRoastDate={loaderData.nextRoastDate} />
+      <Header shopInfo={loaderData.shopInfo} menu={loaderData.mainMenu} />
       <Outlet />
-      <Footer shopInfo={loaderData.shopInfo} />
+      <Footer shopInfo={loaderData.shopInfo} menu={loaderData.footerMenu} />
       <CartDrawer />
       <SearchDrawer />
     </CartProvider>

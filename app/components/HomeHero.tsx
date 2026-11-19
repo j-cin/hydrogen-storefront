@@ -31,7 +31,7 @@ export function HomeHero({ hero }: { hero: HomeHeroData }) {
           className={`max-w-page px-margin relative z-10 mx-auto flex flex-col items-start justify-end ${image ? "text-interactive-text min-h-hero p-8 pb-12" : "text-on-surface py-16 md:py-20"}`}
         >
           <h1 id="hero-heading" className="type-display max-w-2xl wrap-anywhere">
-            {hero.heading}
+            Hello {hero.heading}
           </h1>
           {hero.description ? (
             <p className="type-body-lg mt-3 max-w-prose wrap-anywhere whitespace-pre-line opacity-90">

@@ -126,6 +126,15 @@ export async function loadSearchPage({
     };
   }
 
+  return runProductSearch(storefrontClient, url, searchTerm);
+}
+
+/** Runs a product search (filters, sort, cursor) from the URL's browse params. */
+async function runProductSearch(
+  storefrontClient: StorefrontClient,
+  url: URL,
+  searchTerm: string,
+): Promise<SearchPagePerformedData> {
   const browse = parseCollectionParams(url.searchParams);
   const after = url.searchParams.get("after") || undefined;
   const sortKey = browse.sortKey === "PRICE" ? "PRICE" : "RELEVANCE";
@@ -159,4 +168,19 @@ export async function loadSearchPage({
     dataSearch: url.searchParams.toString(),
     origin: url.origin,
   };
+}
+
+/**
+ * Every product in the store, for /collections/all. Shopify has no "all"
+ * collection in the Storefront API; an empty search term returns every product
+ * and, unlike `products()`, still supports filters.
+ */
+export async function loadAllProductsPage({
+  storefrontClient,
+  request,
+}: {
+  storefrontClient: StorefrontClient;
+  request: Request;
+}): Promise<SearchPagePerformedData> {
+  return runProductSearch(storefrontClient, new URL(request.url), "");
 }

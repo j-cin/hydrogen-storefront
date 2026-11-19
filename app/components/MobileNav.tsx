@@ -1,8 +1,12 @@
-import { Link } from "react-router";
-
 import { closeMobileNavDrawer, MOBILE_NAV_DRAWER_ID, openDialogFallback } from "~/lib/cart-drawer";
+import type { NavItem } from "~/lib/menu";
 
-export function MobileNav() {
+import { NavLink } from "./NavLink";
+
+const linkClass =
+  "min-h-touch-target text-on-surface flex items-center rounded-sm text-xl font-normal no-underline hover:opacity-70 motion-safe:transition-opacity";
+
+export function MobileNav({ items }: { items: NavItem[] }) {
   return (
     <dialog
       id={MOBILE_NAV_DRAWER_ID}
@@ -34,15 +38,24 @@ export function MobileNav() {
         <div className="flex-1 overflow-y-auto p-4">
           <nav aria-label="Mobile navigation">
             <ul role="list" className="flex flex-col">
-              <li>
-                <Link
-                  to="/collections"
-                  className="min-h-touch-target text-on-surface flex items-center rounded-sm text-xl font-normal no-underline hover:opacity-70 motion-safe:transition-opacity"
-                  onClick={() => closeMobileNavDrawer()}
-                >
-                  Collections
-                </Link>
-              </li>
+              {items.map((item) => (
+                <li key={item.id}>
+                  <NavLink item={item} className={linkClass} onClick={() => closeMobileNavDrawer()} />
+                  {item.items.length > 0 ? (
+                    <ul role="list" className="mb-2 flex flex-col ps-4">
+                      {item.items.map((child) => (
+                        <li key={child.id}>
+                          <NavLink
+                            item={child}
+                            className="min-h-touch-target text-on-surface-secondary flex items-center text-base no-underline"
+                            onClick={() => closeMobileNavDrawer()}
+                          />
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </li>
+              ))}
             </ul>
           </nav>
         </div>

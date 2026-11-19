@@ -1,13 +1,15 @@
 import { Link } from "react-router";
 
+import type { NavItem } from "~/lib/menu";
 import type { StorefrontShop } from "~/lib/storefront-shop";
 
+import { NavLink } from "./NavLink";
 import { PaymentMethodIcon } from "./PaymentMethodIcon";
 
 const linkClass =
   "min-h-touch-target text-on-surface-secondary hover:text-on-surface focus-visible:outline-accent inline-flex items-center font-normal no-underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 motion-safe:transition-colors";
 
-export function Footer({ shopInfo }: { shopInfo: StorefrontShop }) {
+export function Footer({ shopInfo, menu }: { shopInfo: StorefrontShop; menu: NavItem[] }) {
   return (
     <footer className="max-w-page px-margin mx-auto w-full">
       <div
@@ -24,6 +26,13 @@ export function Footer({ shopInfo }: { shopInfo: StorefrontShop }) {
             Customer care
           </h2>
           <ul role="list" className="flex flex-col gap-2">
+            {menu
+              .filter((item) => item.to !== "/search" && item.to !== "/account")
+              .map((item) => (
+                <li key={item.id}>
+                  <NavLink item={item} className={linkClass} />
+                </li>
+              ))}
             <li>
               <Link to="/search" className={linkClass}>
                 Search
