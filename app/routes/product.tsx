@@ -8,12 +8,13 @@ import {
 } from "@shopify/hydrogen";
 import { ShopPayButton } from "@shopify/hydrogen/react";
 import { useEffect, useMemo, useState, type MouseEvent } from "react";
-import { Link, useLocation, useNavigate } from "react-router";
+import { Link, useLocation, useNavigate, useRouteLoaderData } from "react-router";
 
 import { ProductCard, PRODUCT_CARD_FRAGMENT } from "~/components/ProductCard";
 import { openCartDrawer } from "~/lib/cart-drawer";
 import { formatPrice, salePercent } from "~/lib/money";
 import { ProductProvider, useProductForm } from "~/lib/product";
+import { formatRoastDate } from "~/lib/roast-date";
 import { storefrontClientContext } from "~/lib/storefront";
 import { formatPageTitle, getShopNameFromRootMatch } from "~/lib/storefront-shop";
 
@@ -63,6 +64,29 @@ const PRODUCT_QUERY = gql(
         description
         descriptionHtml
         requiresSellingPlan
+        # Morrow coffee profile (product metafields, Storefront access enabled).
+        tastingNotes: metafield(namespace: "morrow", key: "tasting_notes") {
+          value
+        }
+        origin: metafield(namespace: "morrow", key: "origin") {
+          value
+        }
+        process: metafield(namespace: "morrow", key: "process") {
+          value
+        }
+        roastLevel: metafield(namespace: "morrow", key: "roast_level") {
+          value
+        }
+        producer: metafield(namespace: "morrow", key: "producer") {
+          reference {
+            ... on Metaobject {
+              handle
+              name: field(key: "name") {
+                value
+              }
+            }
+          }
+        }
         encodedVariantExistence
         encodedVariantAvailability
         featuredImage {
@@ -700,11 +724,7 @@ function ProductInfo({
 
       <span className="sr-only" aria-live="polite" id="inventory-status" />
 
-      {product.description ? (
-        <div className="type-body-sm text-on-surface-secondary leading-relaxed">
-          {product.description}
-        </div>
-      ) : null}
+      <CoffeeProfile product={product} />
 
       <div data-product-form>
         <span className="sr-only" aria-live="polite" data-add-to-cart-status />
@@ -736,6 +756,91 @@ function ProductInfo({
           )}
         </div>
       </details>
+    </div>
+  );
+}
+
+// Light → dark, shown as a five-step scale.
+const ROAST_SCALE = ["Light", "Medium-light", "Medium", "Medium-dark", "Dark"];
+
+function parseList(value: string | null | undefined): string[] {
+  if (!value) return [];
+  try {
+    const parsed: unknown = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.filter((item) => typeof item === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+function CoffeeProfile({ product }: { product: ProductData }) {
+  const rootData = useRouteLoaderData<{ nextRoastDate?: string }>("root");
+  const notes = parseList(product.tastingNotes?.value);
+  const roast = product.roastLevel?.value ?? null;
+  const roastStep = roast ? ROAST_SCALE.indexOf(roast) : -1;
+  const producer =
+    product.producer?.reference && "handle" in product.producer.reference
+      ? product.producer.reference
+      : null;
+  const facts = [
+    { label: "Origin", value: product.origin?.value },
+    { label: "Process", value: product.process?.value },
+  ].filter((fact): fact is { label: string; value: string } => Boolean(fact.value));
+
+  // Gear and merch have no coffee profile.
+  if (notes.length === 0 && !roast && facts.length === 0) return null;
+
+  return (
+    <div className="border-border flex flex-col gap-5 border-y py-6">
+      {notes.length > 0 ? (
+        <div>
+          <h2 className="type-overline text-on-surface-secondary mb-1">Tastes like</h2>
+          <p className="type-heading-md text-on-surface">{notes.join(" · ")}</p>
+        </div>
+      ) : null}
+      <dl className="grid grid-cols-2 gap-x-6 gap-y-4 text-sm sm:grid-cols-3">
+        {facts.map((fact) => (
+          <div key={fact.label}>
+            <dt className="text-on-surface-secondary">{fact.label}</dt>
+            <dd className="text-on-surface font-semibold">{fact.value}</dd>
+          </div>
+        ))}
+        {roast ? (
+          <div>
+            <dt className="text-on-surface-secondary">Roast</dt>
+            <dd className="text-on-surface font-semibold">
+              {roast}
+              {roastStep >= 0 ? (
+                <span className="mt-1.5 flex gap-1" aria-hidden="true">
+                  {ROAST_SCALE.map((step, index) => (
+                    <span
+                      key={step}
+                      className={`h-1.5 w-5 rounded-full ${index <= roastStep ? "bg-roast" : "bg-fog"}`}
+                    />
+                  ))}
+                </span>
+              ) : null}
+            </dd>
+          </div>
+        ) : null}
+      </dl>
+      {producer || rootData?.nextRoastDate ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
+          {producer ? (
+            <Link
+              to={`/producers/${producer.handle}`}
+              className="text-on-surface decoration-apricot font-semibold underline decoration-2 underline-offset-4 hover:decoration-current"
+            >
+              Grown by {producer.name?.value ?? producer.handle}
+            </Link>
+          ) : null}
+          {rootData?.nextRoastDate ? (
+            <p className="type-stamp text-on-surface-secondary">
+              Next roast {formatRoastDate(rootData.nextRoastDate)}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }
