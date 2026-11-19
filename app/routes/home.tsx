@@ -1,5 +1,5 @@
 import { gql } from "@shopify/hydrogen";
-import { Link, useRouteLoaderData } from "react-router";
+import { Link } from "react-router";
 
 import {
   CollectionCard,
@@ -8,20 +8,15 @@ import {
 } from "~/components/CollectionCard";
 import { HomeHero } from "~/components/HomeHero";
 import { ProductCard, PRODUCT_CARD_FRAGMENT, type ProductCardData } from "~/components/ProductCard";
-import { selectHomeHero } from "~/lib/home-hero";
+import { HOME_HERO, selectHomeHero } from "~/lib/home-hero";
 import { storefrontClientContext } from "~/lib/storefront";
-import {
-  FALLBACK_SHOP_NAME,
-  formatPageTitle,
-  getShopNameFromRootMatch,
-} from "~/lib/storefront-shop";
-import type { loader as rootLoader } from "~/root";
+import { formatPageTitle, getShopNameFromRootMatch } from "~/lib/storefront-shop";
 
 import type { Route } from "./+types/home";
 
 const HOME_QUERY = gql(
   `
-    query Home {
+    query Home($heroCollectionHandle: String!, $heroProductHandle: String!) {
       products(first: 8, sortKey: CREATED_AT, reverse: true) {
         nodes {
           ...ProductCard
@@ -32,23 +27,17 @@ const HOME_QUERY = gql(
           ...CollectionCard
         }
       }
-      heroCollections: collections(first: 1, sortKey: UPDATED_AT, reverse: true) {
-        nodes {
-          title
-          handle
-          description
-          image {
-            url
-            altText
-          }
-          products(first: 1) {
-            nodes {
-              featuredImage {
-                url
-                altText
-              }
-            }
-          }
+      heroCollection: collection(handle: $heroCollectionHandle) {
+        handle
+        image {
+          url
+          altText
+        }
+      }
+      heroProduct: product(handle: $heroProductHandle) {
+        featuredImage {
+          url
+          altText
         }
       }
     }
@@ -69,27 +58,34 @@ export function meta({ matches }: Route.MetaArgs) {
 
 export async function loader({ context }: Route.LoaderArgs) {
   const storefrontClient = context.get(storefrontClientContext);
-  const { data } = await storefrontClient.graphql(HOME_QUERY);
+  const { data } = await storefrontClient.graphql(HOME_QUERY, {
+    variables: {
+      heroCollectionHandle: HOME_HERO.collectionHandle,
+      heroProductHandle: HOME_HERO.imageProductHandle,
+    },
+  });
 
   // New arrivals: the most recently created products (by creation date, not
   // publication date), newest first, in the order the Storefront API returns.
   const featuredProducts: ProductCardData[] = data?.products.nodes ?? [];
   const featuredCollections: CollectionCardData[] = data?.collections.nodes ?? [];
-  // The hero features the most recently updated collection, independent of the
-  // category list above.
-  const heroCollections = data?.heroCollections.nodes ?? [];
+  // The hero is pinned (see HOME_HERO), independent of the category list above.
+  const hero = selectHomeHero({
+    collection: data?.heroCollection ?? null,
+    product: data?.heroProduct ?? null,
+  });
 
   return {
     featuredProducts,
     featuredCollections,
-    heroCollections,
+    hero,
   };
 }
 
 function NewArrivals({ products }: { products: readonly ProductCardData[] }) {
   return (
     <section className="bg-surface w-full pt-20 pb-12" aria-labelledby="new-arrivals-heading">
-      <div className="max-w-page px-margin mx-auto mb-4 flex items-center justify-between gap-4">
+      <div className="max-w-page px-margin mx-auto mb-8 flex items-end justify-between gap-4">
         <h2 id="new-arrivals-heading" className="type-heading-xl">
           New arrivals
         </h2>
@@ -122,7 +118,7 @@ function NewArrivals({ products }: { products: readonly ProductCardData[] }) {
         <div className="max-w-page px-margin mx-auto contain-paint">
           <ul
             role="list"
-            className="grid grid-cols-1 gap-x-1 gap-y-10 md:grid-cols-2 lg:grid-cols-4"
+            className="grid grid-cols-2 gap-x-4 gap-y-10 md:gap-x-6 md:gap-y-12 lg:grid-cols-4"
           >
             {products.map((product) => (
               <li key={product.handle}>
@@ -138,12 +134,15 @@ function NewArrivals({ products }: { products: readonly ProductCardData[] }) {
 
 function ShopByCategory({ collections }: { collections: readonly CollectionCardData[] }) {
   return (
-    <section className="w-full py-12" aria-labelledby="category-heading">
-      <h2 id="category-heading" className="type-heading-xl max-w-page px-margin mx-auto mb-4">
+    <section className="w-full pt-12 pb-20" aria-labelledby="category-heading">
+      <h2 id="category-heading" className="type-heading-xl max-w-page px-margin mx-auto mb-8">
         Shop by category
       </h2>
       {collections.length > 0 ? (
-        <ul role="list" className="max-w-page px-margin mx-auto grid grid-cols-1 md:grid-cols-3">
+        <ul
+          role="list"
+          className="max-w-page px-margin mx-auto grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-6"
+        >
           {collections.map((collection) => (
             <li key={collection.handle}>
               <CollectionCard collection={collection} />
@@ -156,15 +155,9 @@ function ShopByCategory({ collections }: { collections: readonly CollectionCardD
 }
 
 export default function Home({ loaderData }: Route.ComponentProps) {
-  const rootData = useRouteLoaderData<typeof rootLoader>("root");
-  const hero = selectHomeHero(
-    loaderData.heroCollections,
-    rootData?.shopInfo.name ?? FALLBACK_SHOP_NAME,
-  );
-
   return (
     <main className="flex-1" id="main-content" tabIndex={-1}>
-      <HomeHero hero={hero} />
+      <HomeHero hero={loaderData.hero} />
       <NewArrivals products={loaderData.featuredProducts} />
       <ShopByCategory collections={loaderData.featuredCollections} />
     </main>

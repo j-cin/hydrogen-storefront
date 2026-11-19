@@ -1,39 +1,43 @@
 type HeroImage = { url: string; altText: string | null };
 
-type HeroCollection = {
-  title: string;
-  handle: string;
-  description: string;
-  image: HeroImage | null;
-  products: { nodes: readonly { featuredImage: HeroImage | null }[] };
-};
-
 export type HomeHeroData = {
   heading: string;
   description: string | null;
   image: HeroImage | null;
   to: string;
+  cta: string;
 };
 
 /**
- * Builds the homepage hero from the first collection passed in (the home query
- * requests the most recently updated one). Its title, description, and image
- * stay together, with its first product image as the image fallback. Without a
- * collection, the hero shows the shop name and links to the collections index.
+ * Pinned homepage hero. Edit these values to change the hero; it no longer
+ * follows whichever collection was updated most recently.
+ *
+ * - `collectionHandle`: where the button goes. Give that collection an image in
+ *   Shopify admin and it replaces the fallback image below.
+ * - `imageProductHandle`: the product whose featured image is used when the
+ *   collection has no image of its own.
  */
-export function selectHomeHero(
-  collections: readonly HeroCollection[],
-  shopName: string,
-): HomeHeroData {
-  const collection = collections[0];
-  if (!collection) {
-    return { heading: shopName, description: null, image: null, to: "/collections" };
-  }
+export const HOME_HERO = {
+  collectionHandle: "coffee",
+  imageProductHandle: "ceramic-dripper",
+  heading: "Roasted on Monday. In your cup by Thursday.",
+  description:
+    "We roast once a week and ship within 72 hours. Every bag tells you who grew it.",
+  cta: "Shop coffee",
+} as const;
 
+type PinnedHeroSources = {
+  collection: { handle: string; image: HeroImage | null } | null;
+  product: { featuredImage: HeroImage | null } | null;
+};
+
+export function selectHomeHero({ collection, product }: PinnedHeroSources): HomeHeroData {
   return {
-    heading: collection.title,
-    description: collection.description.trim() || null,
-    image: collection.image ?? collection.products.nodes[0]?.featuredImage ?? null,
-    to: `/collections/${collection.handle}`,
+    heading: HOME_HERO.heading,
+    description: HOME_HERO.description,
+    image: collection?.image ?? product?.featuredImage ?? null,
+    // If the pinned collection is missing or unpublished, fall back to shop all.
+    to: collection ? `/collections/${collection.handle}` : "/collections/all",
+    cta: collection ? HOME_HERO.cta : "Shop all",
   };
 }

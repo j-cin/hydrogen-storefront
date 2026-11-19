@@ -1005,14 +1005,16 @@ function TastingNotes({ product }: { product: ProductData }) {
   if (notes.length === 0) return null;
 
   return (
+    // Plain descriptive text, not pills: bordered chips read as tappable controls
+    // next to the variant options and buttons below.
     <div className="mt-3">
       <h2 className="sr-only">Tasting notes</h2>
-      <ul role="list" className="flex flex-wrap gap-2">
-        {notes.map((note) => (
-          <li
-            key={note}
-            className="border-border bg-paper text-on-surface rounded-full border px-3 py-1 text-sm"
-          >
+      <ul role="list" className="type-body-lg text-on-surface-secondary flex flex-wrap items-center">
+        {notes.map((note, index) => (
+          <li key={note} className="inline-flex items-center">
+            {index > 0 ? (
+              <span className="bg-apricot mx-3 size-1.5 rounded-full" aria-hidden="true" />
+            ) : null}
             {note}
           </li>
         ))}

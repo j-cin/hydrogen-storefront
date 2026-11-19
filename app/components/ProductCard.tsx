@@ -60,11 +60,11 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
 
   return (
     <article
-      className="group card flex flex-col gap-2"
+      className="group card flex flex-col gap-3"
       aria-label={product.title}
       data-testid="product-card"
     >
-      <div className="rounded-card bg-surface-secondary relative block aspect-square overflow-hidden">
+      <div className="product-tile relative block aspect-square overflow-hidden">
         {primaryImage ? (
           <div className="h-full w-full motion-safe:transition-transform motion-safe:duration-300 motion-safe:group-hover:scale-[1.04]">
             <img
@@ -95,7 +95,7 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
         ) : null}
       </div>
       <div className="flex flex-col gap-0.5 text-left">
-        <h3 className="type-body-sm text-on-surface line-clamp-2 font-medium">
+        <h3 className="type-body text-on-surface line-clamp-2 leading-snug font-semibold">
           <Link to={`/products/${product.handle}`} className="card-link text-on-surface">
             {product.title}
           </Link>
@@ -103,7 +103,7 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
         <div className="inline-flex flex-wrap items-baseline gap-2 text-sm">
           {onSale ? (
             <>
-              <span className="text-sale font-medium">
+              <span className="text-on-surface font-semibold">
                 <span className="sr-only">Sale price: </span>
                 {formatPrice(price)}
               </span>
@@ -113,7 +113,7 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
               </s>
             </>
           ) : (
-            <span className="text-on-surface font-medium">
+            <span className="text-on-surface-secondary">
               <span className="sr-only">Price: </span>
               {formatPrice(price)}
             </span>

@@ -61,8 +61,14 @@
 
   /* Softer, friendlier shapes */
   --radius-button: 9999px;
-  --radius-card: 0.75rem;
-  --radius-input: 0.5rem;
+  --radius-card: 1rem;
+  --radius-input: 0.625rem;
+
+  /* Warm, diffuse shadows tinted espresso instead of flat grey-black. */
+  --shadow-sm: 0 1px 2px 0 rgb(43 30 22 / 0.06), 0 1px 3px 0 rgb(43 30 22 / 0.05);
+  --shadow: 0 2px 4px -1px rgb(43 30 22 / 0.06), 0 6px 16px -4px rgb(43 30 22 / 0.1);
+  --shadow-lg: 0 4px 8px -2px rgb(43 30 22 / 0.06), 0 16px 32px -8px rgb(43 30 22 / 0.14);
+  --shadow-xl: 0 24px 56px -12px rgb(43 30 22 / 0.28);
 
   /* Typography (Google Fonts, loaded in root.tsx) */
   --font-body: "Inter", system-ui, -apple-system, sans-serif;
@@ -78,6 +84,21 @@
 @layer base {
   body {
     font-weight: 400;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
   }
 
   ::selection {
@@ -110,9 +131,80 @@
   .button-secondary {
     font-weight: 600;
   }
+  .button-primary {
+    box-shadow: var(--shadow-sm);
+  }
   .button-outline:hover {
     background: var(--color-espresso);
     color: var(--color-cream);
+  }
+
+  /* One smooth, eased motion for every button and inline link. */
+  @media (prefers-reduced-motion: no-preference) {
+    :is(.button-primary, .button-secondary, .button-outline, .button-ghost, .button-icon, .option-pill),
+    a {
+      transition-property: color, background-color, border-color, box-shadow, opacity, transform;
+      transition-duration: 200ms;
+      transition-timing-function: var(--ease-ui);
+    }
+    @media (hover: hover) {
+      .button-primary:hover {
+        box-shadow: var(--shadow);
+        transform: translateY(-1px);
+      }
+    }
+  }
+
+  /* Image overlays tinted espresso so photos stay warm. */
+  .overlay-dark {
+    background: linear-gradient(
+      to top,
+      rgb(43 30 22 / 0.78) 0%,
+      rgb(43 30 22 / 0.32) 55%,
+      rgb(43 30 22 / 0.04) 100%
+    );
+  }
+
+  /* Product image tile: every product sits on the same paper surface. */
+  .product-tile {
+    background: var(--color-paper);
+    border-radius: var(--radius-card);
+  }
+  /* Hairline drawn above the image: product shots bake in a cream background,
+     so a border underneath them would vanish and bags would look unframed. */
+  .product-tile::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    box-shadow: inset 0 0 0 1px rgb(43 30 22 / 0.08);
+    pointer-events: none;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .product-tile {
+      transition:
+        box-shadow 300ms var(--ease-ui),
+        transform 300ms var(--ease-ui);
+    }
+    @media (hover: hover) {
+      .group:hover .product-tile {
+        box-shadow: var(--shadow-lg);
+        transform: translateY(-2px);
+      }
+    }
+  }
+
+  /* Hero scrim: darkens the bottom AND the start edge, so the copy stays
+     readable whatever the featured collection image is. */
+  .overlay-hero {
+    background:
+      linear-gradient(to top, rgb(43 30 22 / 0.7) 0%, rgb(43 30 22 / 0) 60%),
+      linear-gradient(to right, rgb(43 30 22 / 0.75) 0%, rgb(43 30 22 / 0.35) 45%, rgb(43 30 22 / 0) 75%);
+  }
+  @media (max-width: 47.99rem) {
+    .overlay-hero {
+      background: linear-gradient(to top, rgb(43 30 22 / 0.85) 0%, rgb(43 30 22 / 0.45) 60%, rgb(43 30 22 / 0.15) 100%);
+    }
   }
 
   .badge-sale {

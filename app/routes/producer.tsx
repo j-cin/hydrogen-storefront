@@ -1,6 +1,7 @@
 import { gql } from "@shopify/hydrogen";
 
 import { Breadcrumb } from "~/components/Breadcrumb";
+import { RichText, richTextToPlainText } from "~/components/RichText";
 import { toParagraphs } from "~/lib/metaobject";
 import { storefrontClientContext } from "~/lib/storefront";
 import { formatPageTitle, getShopNameFromRootMatch } from "~/lib/storefront-shop";
@@ -11,7 +12,7 @@ import type { Route } from "./+types/producer";
 // Storefront API access enabled. Expected fields:
 //   name (single line text, display name) · country · region (single line text)
 //   altitude (single line text, e.g. "1,850 m") · varieties (single line text)
-//   story (multi-line text) · image (file reference, image)
+//   story (rich text; plain multi-line text also works) · image (file reference, image)
 const PRODUCER_QUERY = gql(`
   query Producer($handle: String!, $country: CountryCode, $language: LanguageCode)
   @inContext(country: $country, language: $language) {
@@ -65,6 +66,12 @@ export async function loader({ context, params, request }: Route.LoaderArgs) {
       ? producer.image.reference.image
       : null;
 
+  // `story` is a rich_text_field (JSON). Older entries may still be plain
+  // multi-line text, so fall back to splitting that into paragraphs.
+  const storyValue = producer.story?.value ?? null;
+  const storyPlainText = richTextToPlainText(storyValue);
+  const isRichText = storyPlainText.length > 0;
+
   return {
     producer: {
       handle: producer.handle,
@@ -75,11 +82,17 @@ export async function loader({ context, params, request }: Route.LoaderArgs) {
         { label: "Altitude", value: producer.altitude?.value },
         { label: "Varieties", value: producer.varieties?.value },
       ].filter((fact): fact is { label: string; value: string } => Boolean(fact.value)),
-      story: toParagraphs(producer.story?.value),
+      storyRichText: isRichText ? storyValue : null,
+      storyParagraphs: isRichText ? [] : toParagraphs(storyValue),
+      summary: isRichText ? storyPlainText : (toParagraphs(storyValue)[0] ?? ""),
       image: image ?? null,
     },
     origin: new URL(request.url).origin,
   };
+}
+
+function truncate(text: string, max: number) {
+  return text.length <= max ? text : `${text.slice(0, max - 1).trimEnd()}…`;
 }
 
 export function meta({ loaderData, matches }: Route.MetaArgs) {
@@ -88,7 +101,9 @@ export function meta({ loaderData, matches }: Route.MetaArgs) {
   if (!producer) return [{ title: formatPageTitle("Producer not found", shopName) }];
   return [
     { title: formatPageTitle(producer.name, shopName) },
-    ...(producer.story[0] ? [{ name: "description", content: producer.story[0] }] : []),
+    ...(producer.summary
+      ? [{ name: "description", content: truncate(producer.summary, 160) }]
+      : []),
   ];
 }
 
@@ -132,11 +147,15 @@ export default function ProducerRoute({ loaderData }: Route.ComponentProps) {
                 ))}
               </dl>
             ) : null}
-            <div className="richtext type-body">
-              {producer.story.map((paragraph, index) => (
-                <p key={index}>{paragraph}</p>
-              ))}
-            </div>
+            {producer.storyRichText ? (
+              <RichText value={producer.storyRichText} className="richtext type-body" />
+            ) : (
+              <div className="richtext type-body">
+                {producer.storyParagraphs.map((paragraph, index) => (
+                  <p key={index}>{paragraph}</p>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>

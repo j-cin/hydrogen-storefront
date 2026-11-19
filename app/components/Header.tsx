@@ -37,7 +37,7 @@ export function Header({ menu }: { shopInfo: StorefrontShop; menu: NavItem[] }) 
   const totalQuantity = useCart((state) => state.data.totalQuantity);
 
   return (
-    <header className="border-border bg-surface sticky top-0 z-40 border-b">
+    <header className="border-border/70 bg-surface/85 supports-[backdrop-filter]:bg-surface/75 sticky top-0 z-40 border-b backdrop-blur-md backdrop-saturate-150">
       <div
         className="max-w-page px-margin mx-auto flex h-16 w-full items-center justify-between"
         data-header-nav-group
