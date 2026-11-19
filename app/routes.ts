@@ -4,8 +4,9 @@ export default [
   index("routes/home.tsx"),
   route("products/:handle", "routes/product.tsx"),
   route("collections", "routes/collections.tsx"),
-  // Static segment outranks :handle; the store has no "all" collection.
-  route("collections/all", "routes/all-products.tsx"),
+  // Shopify reserves the "all" handle, so /collections/all renders the
+  // "shop-all" smart collection (every Morrow product) with the collection page.
+  route("collections/all", "routes/collection.tsx", { id: "routes/all-products" }),
   route("collections/:handle", "routes/collection.tsx"),
   route("cart", "routes/cart.tsx"),
   route("search", "routes/search.tsx"),

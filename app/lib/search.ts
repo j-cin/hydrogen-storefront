@@ -170,17 +170,3 @@ async function runProductSearch(
   };
 }
 
-/**
- * Every product in the store, for /collections/all. Shopify has no "all"
- * collection in the Storefront API; an empty search term returns every product
- * and, unlike `products()`, still supports filters.
- */
-export async function loadAllProductsPage({
-  storefrontClient,
-  request,
-}: {
-  storefrontClient: StorefrontClient;
-  request: Request;
-}): Promise<SearchPagePerformedData> {
-  return runProductSearch(storefrontClient, new URL(request.url), "");
-}
