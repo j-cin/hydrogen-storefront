@@ -15,3 +15,14 @@ export function toLines(value: string | null | undefined): string[] {
     .map((line) => line.trim())
     .filter(Boolean);
 }
+
+export type ReferencedImage = { url: string; altText: string | null };
+
+/** The image from a file_reference field queried with `... on MediaImage { image { ... } }`. */
+export function referencedImage(
+  field: { reference?: object | null } | null | undefined,
+): ReferencedImage | null {
+  const reference = field?.reference;
+  if (!reference || !("image" in reference)) return null;
+  return (reference as { image?: ReferencedImage | null }).image ?? null;
+}

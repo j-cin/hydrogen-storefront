@@ -1,3 +1,5 @@
+import { referencedImage } from "~/lib/metaobject";
+
 type HeroImage = { url: string; altText: string | null };
 
 export type HomeHeroData = {
@@ -9,35 +11,52 @@ export type HomeHeroData = {
 };
 
 /**
- * Pinned homepage hero. Edit these values to change the hero; it no longer
- * follows whichever collection was updated most recently.
- *
- * - `collectionHandle`: where the button goes. Give that collection an image in
- *   Shopify admin and it replaces the fallback image below.
- * - `imageProductHandle`: the product whose featured image is used when the
- *   collection has no image of its own.
+ * The homepage hero reads the `home_hero` metaobject with handle "main"
+ * (Content > Metaobjects > Home hero). Fields: heading · subheading · image ·
+ * cta_label · cta_link. Until an image is uploaded there, the featured image of
+ * `FALLBACK_IMAGE_PRODUCT_HANDLE` is used.
  */
-export const HOME_HERO = {
-  collectionHandle: "coffee",
-  imageProductHandle: "ceramic-dripper",
-  heading: "Roasted on Monday. In your cup by Thursday.",
-  description:
-    "We roast once a week and ship within 72 hours. Every bag tells you who grew it.",
-  cta: "Shop coffee",
-} as const;
+export const HOME_HERO_HANDLE = "main";
+export const FALLBACK_IMAGE_PRODUCT_HANDLE = "ceramic-dripper";
 
-type PinnedHeroSources = {
-  collection: { handle: string; image: HeroImage | null } | null;
-  product: { featuredImage: HeroImage | null } | null;
+const DEFAULT_HERO: HomeHeroData = {
+  heading: "Coffee that's never more than a week old.",
+  description: "Roasted every Monday, shipped within 72 hours, traceable to the farm.",
+  image: null,
+  to: "/collections/coffee",
+  cta: "Shop coffee",
 };
 
-export function selectHomeHero({ collection, product }: PinnedHeroSources): HomeHeroData {
+type HeroField = { value: string | null } | null | undefined;
+
+export type HomeHeroSource = {
+  heading?: HeroField;
+  subheading?: HeroField;
+  ctaLabel?: HeroField;
+  ctaLink?: HeroField;
+  image?: { reference?: object | null } | null;
+} | null;
+
+function text(field: HeroField): string | null {
+  const value = field?.value?.trim();
+  return value ? value : null;
+}
+
+/** Only same-site paths are allowed as the button link. */
+function safeLink(value: string | null): string | null {
+  return value && value.startsWith("/") && !value.startsWith("//") ? value : null;
+}
+
+export function selectHomeHero(
+  metaobject: HomeHeroSource,
+  fallbackImage: HeroImage | null,
+): HomeHeroData {
+  const image = referencedImage(metaobject?.image);
   return {
-    heading: HOME_HERO.heading,
-    description: HOME_HERO.description,
-    image: collection?.image ?? product?.featuredImage ?? null,
-    // If the pinned collection is missing or unpublished, fall back to shop all.
-    to: collection ? `/collections/${collection.handle}` : "/collections/all",
-    cta: collection ? HOME_HERO.cta : "Shop all",
+    heading: text(metaobject?.heading) ?? DEFAULT_HERO.heading,
+    description: text(metaobject?.subheading) ?? DEFAULT_HERO.description,
+    image: image ?? fallbackImage,
+    to: safeLink(text(metaobject?.ctaLink)) ?? DEFAULT_HERO.to,
+    cta: text(metaobject?.ctaLabel) ?? DEFAULT_HERO.cta,
   };
 }

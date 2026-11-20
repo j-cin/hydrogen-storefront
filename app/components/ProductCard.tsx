@@ -1,6 +1,8 @@
 import { gql, type StorefrontApi } from "@shopify/hydrogen";
 import { Link } from "react-router";
 
+import { useCartForm } from "~/lib/cart";
+import { openCartDrawer } from "~/lib/cart-drawer";
 import { compareMoney, formatPrice } from "~/lib/money";
 
 export const PRODUCT_CARD_FRAGMENT = gql(`
@@ -35,6 +37,27 @@ export const PRODUCT_CARD_FRAGMENT = gql(`
   }
 `);
 
+// Kept out of the shared card fragment so heavy queries (the product page) stay
+// within TypeScript's type depth. Spread it beside ...ProductCard to enable quick add.
+export const PRODUCT_CARD_QUICK_ADD_FRAGMENT = gql(`
+  fragment ProductCardQuickAdd on Product {
+    selectedOrFirstAvailableVariant {
+      id
+      title
+      availableForSale
+    }
+  }
+`);
+
+const PRODUCT_CARD_QUICK_ADD_SHAPE_QUERY = gql(
+  `query ProductCardQuickAddShape { products(first: 1) { nodes { ...ProductCardQuickAdd } } }`,
+  [PRODUCT_CARD_QUICK_ADD_FRAGMENT],
+);
+
+export type ProductCardQuickAddData = StorefrontApi.ResultOf<
+  typeof PRODUCT_CARD_QUICK_ADD_SHAPE_QUERY
+>["products"]["nodes"][number];
+
 const PRODUCT_CARD_SHAPE_QUERY = gql(
   `query ProductCardShape { products(first: 1) { nodes { ...ProductCard } } }`,
   [PRODUCT_CARD_FRAGMENT],
@@ -47,9 +70,11 @@ export type ProductCardData = StorefrontApi.ResultOf<
 type ProductCardProps = {
   product: ProductCardData;
   priority?: boolean;
+  /** Data from ProductCardQuickAdd: shows a one-tap button for the default variant. */
+  quickAdd?: ProductCardQuickAddData;
 };
 
-export function ProductCard({ product, priority = false }: ProductCardProps) {
+export function ProductCard({ product, priority = false, quickAdd }: ProductCardProps) {
   const primaryImage = product.featuredImage ?? product.images.nodes[0] ?? null;
   const hoverImage = product.images.nodes[1] ?? null;
   const price = product.priceRange.minVariantPrice;
@@ -120,6 +145,29 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
           )}
         </div>
       </div>
+      {quickAdd ? <QuickAdd title={product.title} data={quickAdd} /> : null}
     </article>
+  );
+}
+
+function QuickAdd({ title, data }: { title: string; data: ProductCardQuickAddData }) {
+  const { formProps, register } = useCartForm();
+  const variant = data.selectedOrFirstAvailableVariant;
+  const available = Boolean(variant?.availableForSale);
+  const variantLabel =
+    variant && variant.title !== "Default Title" ? ` (${variant.title})` : "";
+
+  return (
+    <form {...formProps({ afterSubmit: openCartDrawer })} className="relative z-10 mt-auto">
+      {variant ? <input type="hidden" {...register("merchandiseId", { value: variant.id })} /> : null}
+      <button
+        {...register("add")}
+        disabled={!available}
+        aria-label={available ? `Add ${title}${variantLabel} to cart` : undefined}
+        className="rounded-button button-outline focus-visible:outline-accent inline-flex h-11 w-full cursor-pointer items-center justify-center px-4 text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-50 motion-safe:active:scale-[0.97]"
+      >
+        {available ? "Quick add" : "Sold out"}
+      </button>
+    </form>
   );
 }
