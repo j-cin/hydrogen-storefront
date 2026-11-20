@@ -33,6 +33,22 @@ export const ROOT_LAYOUT_QUERY = gql(`
       nextRoastDate: metafield(namespace: "custom", key: "next_roast_date") {
         value
       }
+      privacyPolicy {
+        title
+        handle
+      }
+      refundPolicy {
+        title
+        handle
+      }
+      shippingPolicy {
+        title
+        handle
+      }
+      termsOfService {
+        title
+        handle
+      }
     }
     mainMenu: menu(handle: "main-menu") {
       items {
@@ -48,12 +64,20 @@ export const ROOT_LAYOUT_QUERY = gql(`
         }
       }
     }
+    # Top-level items are column headings (Shop, Learn, Company); their
+    # children are the column links.
     footerMenu: menu(handle: "footer") {
       items {
         id
         title
         url
         type
+        items {
+          id
+          title
+          url
+          type
+        }
       }
     }
     localization {
@@ -79,7 +103,11 @@ type RootLayoutLoaderData = {
   footerMenu: NavItem[];
   /** ISO date (YYYY-MM-DD) of the next weekly roast. */
   nextRoastDate: string;
+  /** Store policies that exist, in footer order. */
+  policies: PolicyLink[];
 };
+
+export type PolicyLink = { title: string; to: string };
 
 export async function loadRootLayout(
   storefrontClient: Pick<StorefrontClient, "graphql">,
@@ -104,5 +132,13 @@ export async function loadRootLayout(
     mainMenu: normalizeMenu(mainMenu?.items, storeHosts),
     footerMenu: normalizeMenu(footerMenu?.items, storeHosts),
     nextRoastDate: getNextRoastDate(new Date(), shop.nextRoastDate?.value),
+    policies: [
+      shop.shippingPolicy,
+      shop.refundPolicy,
+      shop.privacyPolicy,
+      shop.termsOfService,
+    ].flatMap((policy) =>
+      policy ? [{ title: policy.title, to: `/policies/${policy.handle}` }] : [],
+    ),
   };
 }

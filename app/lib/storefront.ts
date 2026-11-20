@@ -14,9 +14,9 @@ import {
   getMockShopDomain,
   getPrivateStorefrontToken,
   getStoreDomain,
-  storefrontConfig,
   shouldUseMockShop,
 } from "~/lib/shop";
+import { getMarketFromRequest } from "~/lib/market";
 
 // Real store: private token + trusted buyer IP. mock.shop: tokenless public
 // access (it is auth-free and rejects any private token, even a placeholder).
@@ -28,12 +28,17 @@ export function createRequestStorefrontClient(
   cache: CacheInstance,
   waitUntil: ExecutionContext["waitUntil"],
 ): RequestStorefrontClient {
-  const { i18n } = storefrontConfig;
+  // mock.shop only knows its own default market, so the selector applies to the real store.
+  const market = getMarketFromRequest(request);
+  const i18n = { country: market.country, language: market.language };
 
   if (shouldUseMockShop(env)) {
     return createStorefrontClient({
       type: "public",
-      requestContext: createShopifyRequestContext({ request, i18n }),
+      requestContext: createShopifyRequestContext({
+        request,
+        i18n: { country: "US", language: "EN" },
+      }),
       config: {
         storeDomain: getMockShopDomain(env),
         cache,

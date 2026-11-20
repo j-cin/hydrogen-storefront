@@ -661,7 +661,7 @@
       pointer-events: auto;
     }
   }
-  .nav-has-dropdown:focus-within .nav-dropdown {
+  .nav-has-dropdown[data-open] .nav-dropdown {
     opacity: 1;
     visibility: visible;
     transform: translateY(0);

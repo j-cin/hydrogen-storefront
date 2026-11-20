@@ -126,7 +126,7 @@ export default function ProducerRoute({ loaderData }: Route.ComponentProps) {
       <div className="max-w-page px-margin mx-auto w-full py-8 md:py-12">
         <Breadcrumb
           crumbs={[
-            { label: "Producers" },
+            { label: "Producers", to: "/producers" },
             { label: producer.name, to: `/producers/${producer.handle}` },
           ]}
           origin={origin}

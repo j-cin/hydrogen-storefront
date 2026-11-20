@@ -15,7 +15,12 @@ export default [
   route("pages/:handle", "routes/page.tsx"),
   route("blogs/:blogHandle", "routes/blog.tsx"),
   route("blogs/:blogHandle/:articleHandle", "routes/article.tsx"),
+  route("producers", "routes/producers.tsx"),
   route("producers/:handle", "routes/producer.tsx"),
+  route("policies/:handle", "routes/policy.tsx"),
+  // Form-only endpoints: footer country selector and newsletter signup.
+  route("localization", "routes/localization.tsx"),
+  route("newsletter", "routes/newsletter.tsx"),
   route("brew", "routes/brew.tsx"),
   route("account", "routes/account.tsx"),
   route("account/orders", "routes/account-orders.tsx"),

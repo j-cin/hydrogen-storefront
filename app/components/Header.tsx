@@ -3,9 +3,9 @@ import { Link } from "react-router";
 import { useCart } from "~/lib/cart";
 import { CART_DRAWER_ID, SEARCH_DRAWER_ID, openDialogFromLinkClick } from "~/lib/cart-drawer";
 import type { NavItem } from "~/lib/menu";
-import type { StorefrontShop } from "~/lib/storefront-shop";
 
 import { Logo } from "./Logo";
+import { NavDropdown } from "./NavDropdown";
 import { NavLink } from "./NavLink";
 import { MobileNav, MobileNavTrigger } from "./MobileNav";
 
@@ -24,14 +24,13 @@ function displayCount(count: number) {
 const desktopLinkClass =
   "text-on-surface focus-visible:outline-accent shrink-0 rounded-sm text-sm font-normal whitespace-nowrap no-underline hover:opacity-70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 motion-safe:transition-opacity";
 
-// Used until the store's "main-menu" has items.
+// Used until the store's "main-menu" has items (Online Store > Navigation).
 export const FALLBACK_MENU: NavItem[] = [
-  { id: "fallback-shop", title: "Shop", to: "/collections/all", external: false, items: [] },
-  { id: "fallback-brew", title: "Brew guides", to: "/brew", external: false, items: [] },
-  { id: "fallback-journal", title: "Journal", to: "/blogs/journal", external: false, items: [] },
+  { id: "fallback-coffee", title: "Coffee", to: "/collections/coffee", external: false, items: [] },
+  { id: "fallback-brew", title: "Brew Guides", to: "/brew", external: false, items: [] },
 ];
 
-export function Header({ menu }: { shopInfo: StorefrontShop; menu: NavItem[] }) {
+export function Header({ menu }: { menu: NavItem[] }) {
   const items = menu.length > 0 ? menu : FALLBACK_MENU;
 
   const totalQuantity = useCart((state) => state.data.totalQuantity);
@@ -57,12 +56,16 @@ export function Header({ menu }: { shopInfo: StorefrontShop; menu: NavItem[] }) 
 
         <nav
           aria-label="Main navigation"
-          className="mx-8 hidden min-w-0 flex-1 items-center gap-8 overflow-x-auto md:flex"
+          className="mx-8 hidden min-w-0 flex-1 items-center gap-7 md:flex"
           data-desktop-nav
         >
-          {items.map((item) => (
-            <NavLink key={item.id} item={item} className={desktopLinkClass} />
-          ))}
+          {items.map((item) =>
+            item.items.length > 0 ? (
+              <NavDropdown key={item.id} item={item} linkClassName={desktopLinkClass} />
+            ) : (
+              <NavLink key={item.id} item={item} className={desktopLinkClass} />
+            ),
+          )}
         </nav>
 
         <div className="flex shrink-0 items-center gap-0">

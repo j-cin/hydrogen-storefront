@@ -26,7 +26,8 @@ import { predictiveSearchHandlers } from "~/lib/predictive-search-handlers";
 import { loadRootLayout } from "~/lib/root-layout";
 import { routeTemplates } from "~/lib/route-templates";
 import { createEphemeralSessionManager } from "~/lib/session";
-import { analyticsConsent, resolveShopIdentity, storefrontConfig } from "~/lib/shop";
+import { getMarketFromRequest, MARKETS } from "~/lib/market";
+import { analyticsConsent, resolveShopIdentity } from "~/lib/shop";
 import {
   createRequestStorefrontClient,
   storefrontClientContext,
@@ -114,6 +115,8 @@ export async function loader({ context, request }: Route.LoaderArgs) {
     mainMenu: layout.mainMenu,
     footerMenu: layout.footerMenu,
     nextRoastDate: layout.nextRoastDate,
+    policies: layout.policies,
+    market: getMarketFromRequest(request),
   };
 }
 
@@ -129,11 +132,15 @@ export function Layout({ children }: { children: ReactNode }) {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         {rootData ? (
           <ShopifyScripts
-            i18n={{ ...storefrontConfig.i18n, currency: rootData.currency }}
+            i18n={{
+              country: rootData.market.country,
+              language: rootData.market.language,
+              currency: rootData.currency,
+            }}
             shop={rootData.shopIdentity.scriptShop}
             analytics={{ channel: rootData.shopIdentity.analyticsShop.channel }}
             shopifyAnalytics={rootData.shopIdentity.shopifyAnalytics}
-            consent={analyticsConsent}
+            consent={analyticsConsent(rootData.market)}
             navigate={navigate}
             routes={routeTemplates}
           />
@@ -162,9 +169,14 @@ export default function App({ loaderData }: Route.ComponentProps) {
       <PageViewedTracker />
       <CartAnalyticsTracker />
       <AnnouncementBar nextRoastDate={loaderData.nextRoastDate} />
-      <Header shopInfo={loaderData.shopInfo} menu={loaderData.mainMenu} />
+      <Header menu={loaderData.mainMenu} />
       <Outlet />
-      <Footer shopInfo={loaderData.shopInfo} menu={loaderData.footerMenu} />
+      <Footer
+        menu={loaderData.footerMenu}
+        policies={loaderData.policies}
+        markets={MARKETS}
+        currentMarket={loaderData.market}
+      />
       <CartDrawer />
       <SearchDrawer />
     </CartProvider>

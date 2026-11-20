@@ -21,7 +21,12 @@ import type { Route } from "./+types/home";
 
 const HOME_QUERY = gql(
   `
-    query Home($heroCollectionHandle: String!, $heroProductHandle: String!) {
+    query Home(
+      $heroCollectionHandle: String!
+      $heroProductHandle: String!
+      $country: CountryCode
+      $language: LanguageCode
+    ) @inContext(country: $country, language: $language) {
       products(first: 8, sortKey: CREATED_AT, reverse: true) {
         nodes {
           ...ProductCard
