@@ -8,7 +8,7 @@ import {
 } from "@shopify/hydrogen";
 import { ShopPayButton } from "@shopify/hydrogen/react";
 import { useEffect, useMemo, useState, type MouseEvent } from "react";
-import { Link, useLocation, useNavigate, useRouteLoaderData } from "react-router";
+import { Link, useLoaderData, useLocation, useNavigate, useRouteLoaderData } from "react-router";
 
 import { ProductCard, PRODUCT_CARD_FRAGMENT } from "~/components/ProductCard";
 import { RichText } from "~/components/RichText";
@@ -259,6 +259,46 @@ export function meta({ matches }: Route.MetaArgs) {
   ];
 }
 
+// Bundle parts (Shopify Bundles) for the "What's included" row. A separate query
+// keeps PRODUCT_QUERY within TypeScript's type depth.
+const BUNDLE_COMPONENTS_QUERY = gql(`
+  query BundleComponents(
+    $handle: String!
+    $selectedOptions: [SelectedOptionInput!]!
+    $country: CountryCode
+    $language: LanguageCode
+  ) @inContext(country: $country, language: $language) {
+    product(handle: $handle) {
+      selectedOrFirstAvailableVariant(
+        selectedOptions: $selectedOptions
+        ignoreUnknownOptions: true
+        caseInsensitiveMatch: true
+      ) {
+        components(first: 10) {
+          nodes {
+            quantity
+            productVariant {
+              title
+              image {
+                url
+                altText
+              }
+              product {
+                title
+                handle
+                featuredImage {
+                  url
+                  altText
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+`);
+
 export async function loader({ context, params, request }: Route.LoaderArgs) {
   const handle = params.handle;
   if (!handle) throw new Response("Not Found", { status: 404 });
@@ -267,14 +307,27 @@ export async function loader({ context, params, request }: Route.LoaderArgs) {
   const selectedOptions = getSelectedProductOptions({
     searchParams: new URL(request.url).searchParams,
   });
-  const { data } = await storefrontClient.graphql(PRODUCT_QUERY, {
-    variables: { handle, selectedOptions },
-  });
+  const [{ data }, { data: bundleData }] = await Promise.all([
+    storefrontClient.graphql(PRODUCT_QUERY, { variables: { handle, selectedOptions } }),
+    storefrontClient.graphql(BUNDLE_COMPONENTS_QUERY, { variables: { handle, selectedOptions } }),
+  ]);
 
   if (!data?.product) throw new Response("Not Found", { status: 404 });
 
+  const bundleItems = (
+    bundleData?.product?.selectedOrFirstAvailableVariant?.components.nodes ?? []
+  ).map((component) => ({
+    quantity: component.quantity,
+    title: component.productVariant.product.title,
+    handle: component.productVariant.product.handle,
+    variantTitle:
+      component.productVariant.title === "Default Title" ? null : component.productVariant.title,
+    image: component.productVariant.image ?? component.productVariant.product.featuredImage ?? null,
+  }));
+
   return {
     product: data.product,
+    bundleItems,
     relatedProducts: data.products.nodes
       .filter((product) => product.handle !== data.product?.handle)
       .slice(0, 4),
@@ -520,8 +573,8 @@ function PriceBlock({
               <span className="sr-only">Regular price: </span>
               {formatPrice(compareAt)}
             </s>
-            <span className="text-on-surface text-sm font-semibold" aria-label={`Save ${percent}%`}>
-              (-{percent}%)
+            <span className="badge-sale rounded-badge inline-flex items-center px-2 py-0.5 text-xs font-semibold">
+              Save {formatPrice({ ...price, amount: (Number(compareAt.amount) - Number(price.amount)).toFixed(2) })}
             </span>
           </>
         ) : (
@@ -597,17 +650,29 @@ function VariantOptions({ product }: { product: ProductData }) {
   if (isSingleVariant) return null;
 
   return (
-    <div className="swatch-buttons space-y-4">
-      {options.map((option) => {
+    <div className="swatch-buttons space-y-6">
+      {options.map((option, optionIndex) => {
         const selectedValue = option.values.find((value) => value.selected)?.name;
         const renderSwatches = hasSwatchData(product, option.name);
         const isColorOption = option.name.toLowerCase().includes("color");
 
         return (
           <fieldset key={option.name} className="space-y-2">
-            <legend className="text-on-surface text-sm font-medium">
-              {option.name}
-              {selectedValue ? `: ${selectedValue}` : ""}
+            <legend className="text-on-surface flex w-full items-center gap-3 text-base font-semibold">
+              <span className="shrink-0">
+                {optionIndex + 1}. {option.name}
+              </span>
+              <span className="border-input-border/60 flex-1 border-t border-dashed" aria-hidden="true" />
+              <span className="border-border text-on-surface-secondary shrink-0 rounded-full border border-dashed px-3 py-0.5 text-xs font-normal">
+                {selectedValue ? (
+                  <>
+                    <span className="sr-only">: </span>
+                    {selectedValue}
+                  </>
+                ) : (
+                  "Not selected"
+                )}
+              </span>
             </legend>
             <div className="flex flex-wrap gap-2" role="group" aria-label={option.name}>
               {option.values.map((variantOption) => {
@@ -789,46 +854,122 @@ function PurchaseOptions({
   const bestSaving = Math.max(...plans.map((plan) => plan.percentOff));
   const subscribeLabel = bestSaving > 0 ? `Subscribe & save ${bestSaving}%` : "Subscribe";
 
-  // The cart reads `sellingPlanId` from the form data; an empty value means a one-time purchase.
+  const subscribed = selectedPlanId !== "";
+  const cardClass = (selected: boolean) =>
+    `rounded-card block border p-4 text-sm motion-safe:transition-colors ${selected ? "border-on-surface bg-paper border-2 p-[calc(1rem-1px)]" : "border-border"}`;
+
+  // The cart reads `sellingPlanId` from the form data; an empty value means a one-time
+  // purchase. The frequency select only submits while the subscribe card is chosen.
   return (
-    <fieldset className="mt-6 space-y-2">
-      <legend className="text-on-surface mb-2 text-sm font-medium">Purchase options</legend>
-      {product.requiresSellingPlan ? null : (
-        <label className="border-border flex cursor-pointer items-center gap-3 rounded-input border p-3 text-sm">
+    <fieldset className="mt-6 space-y-3">
+      <legend className="text-on-surface mb-3 flex w-full items-center gap-3 text-base font-semibold">
+        <span className="shrink-0">Pick your plan</span>
+        <span className="border-input-border/60 flex-1 border-t border-dashed" aria-hidden="true" />
+      </legend>
+      <div className={cardClass(subscribed)}>
+        <label className="flex cursor-pointer items-center gap-3">
           <input
             type="radio"
+            name="purchaseType"
+            checked={subscribed}
+            onChange={() => setSelectedPlanId(selectedPlanId || plans[0]!.id)}
+            className="accent-apricot size-4"
+          />
+          <span className="text-on-surface flex-1 font-semibold">{subscribeLabel}</span>
+          {bestSaving > 0 ? (
+            <span className="badge-success rounded-badge px-2 py-0.5 text-xs font-semibold">
+              Best value
+            </span>
+          ) : null}
+        </label>
+        <div className="mt-3 ps-7">
+          <label className="text-on-surface-secondary mb-1 block text-xs" htmlFor="selling-plan-frequency">
+            Delivery frequency
+          </label>
+          <select
+            id="selling-plan-frequency"
             name="sellingPlanId"
-            value=""
-            checked={selectedPlanId === ""}
+            disabled={!subscribed}
+            value={subscribed ? selectedPlanId : (plans[0]?.id ?? "")}
+            onChange={(event) => setSelectedPlanId(event.target.value)}
+            className="rounded-input border-input-border bg-surface-raised text-on-surface focus-visible:outline-accent min-h-touch-target w-full cursor-pointer border px-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {plans.map((plan) => (
+              <option key={plan.id} value={plan.id}>
+                {plan.label}
+                {plan.percentOff ? ` (save ${plan.percentOff}%)` : ""}
+              </option>
+            ))}
+          </select>
+          <ul role="list" className="text-on-surface-secondary mt-3 space-y-1">
+            {["Skip or cancel any time", "Roasted fresh for every delivery", "Ships free"].map(
+              (perk) => (
+                <li key={perk} className="flex items-center gap-2">
+                  <span className="text-success" aria-hidden="true">✓</span>
+                  {perk}
+                </li>
+              ),
+            )}
+          </ul>
+        </div>
+      </div>
+      {product.requiresSellingPlan ? null : (
+        <label className={`${cardClass(!subscribed)} flex cursor-pointer items-center gap-3`}>
+          <input
+            type="radio"
+            name="purchaseType"
+            checked={!subscribed}
             onChange={() => setSelectedPlanId("")}
             className="accent-apricot size-4"
           />
           <span className="text-on-surface font-semibold">One-time purchase</span>
         </label>
       )}
-      <div className="border-border rounded-input border p-3 text-sm">
-        <p className="text-on-surface mb-2 font-semibold">{subscribeLabel}</p>
-        <p className="text-on-surface-secondary mb-3">Ships free. Skip or cancel any time.</p>
-        <div className="flex flex-wrap gap-2">
-          {plans.map((plan) => (
-            <label
-              key={plan.id}
-              className={`option-pill focus-within:outline-accent cursor-pointer focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 ${selectedPlanId === plan.id ? "is-selected" : ""}`}
-            >
-              <input
-                type="radio"
-                name="sellingPlanId"
-                value={plan.id}
-                checked={selectedPlanId === plan.id}
-                onChange={() => setSelectedPlanId(plan.id)}
-                className="sr-only"
-              />
-              {plan.label}
-            </label>
-          ))}
-        </div>
-      </div>
+      {subscribed ? null : <input type="hidden" name="sellingPlanId" value="" />}
     </fieldset>
+  );
+}
+
+function WhatsIncluded() {
+  const { bundleItems } = useLoaderData<typeof loader>();
+  if (bundleItems.length === 0) return null;
+  return (
+    <section aria-labelledby="whats-included-heading">
+      <h2 id="whats-included-heading" className="text-on-surface mb-3 text-base font-semibold">
+        What's included
+      </h2>
+      <ul role="list" className="grid grid-cols-3 gap-3">
+        {bundleItems.map((item) => (
+          <li key={item.handle}>
+            <Link
+              to={`/products/${item.handle}`}
+              prefetch="intent"
+              className="rounded-card border-border bg-paper focus-visible:outline-accent group block h-full overflow-hidden border no-underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+            >
+              <div className="bg-surface-secondary aspect-square overflow-hidden">
+                {item.image ? (
+                  <img
+                    src={item.image.url}
+                    alt=""
+                    loading="lazy"
+                    className="h-full w-full object-cover motion-safe:transition-transform group-hover:scale-[1.03]"
+                  />
+                ) : null}
+              </div>
+              <div className="p-3 text-center">
+                <p className="text-on-surface text-sm font-medium group-hover:underline">
+                  {item.quantity > 1 ? `${item.quantity} × ` : ""}
+                  {item.title}
+                </p>
+                {item.variantTitle ? (
+                  <p className="text-on-surface-secondary mt-0.5 text-xs">{item.variantTitle}</p>
+                ) : null}
+              </div>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
@@ -953,6 +1094,8 @@ function ProductInfo({
       <span className="sr-only" aria-live="polite" id="inventory-status" />
 
       <CoffeeProfile product={product} />
+
+      <WhatsIncluded />
 
       <div data-product-form>
         <span className="sr-only" aria-live="polite" data-add-to-cart-status />
