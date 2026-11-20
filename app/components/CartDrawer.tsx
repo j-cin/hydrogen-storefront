@@ -231,6 +231,49 @@ function CartLines() {
   );
 }
 
+// Matches the promise in AnnouncementBar ("Free shipping over A$60"). The
+// threshold is stated in AUD, so the meter only shows for AUD carts.
+const FREE_SHIPPING_THRESHOLD = { amount: "60.00", currencyCode: "AUD" } as const;
+
+function FreeShippingMeter() {
+  const lines = useCart((state) => state.data.lines.nodes);
+  const subtotal = useCart((state) => state.data.cost.subtotalAmount);
+
+  if (lines.length === 0 || subtotal.currencyCode !== FREE_SHIPPING_THRESHOLD.currencyCode) {
+    return null;
+  }
+
+  const threshold = Number.parseFloat(FREE_SHIPPING_THRESHOLD.amount);
+  const current = Number.parseFloat(subtotal.amount) || 0;
+  const remaining = Math.max(0, threshold - current);
+  const progress = Math.min(100, Math.round((current / threshold) * 100));
+  const message =
+    remaining === 0
+      ? "Nice. Your order ships free."
+      : `You're ${formatPrice({ amount: remaining.toFixed(2), currencyCode: subtotal.currencyCode })} away from free shipping.`;
+
+  return (
+    <div className="border-border mx-4 mb-2 border-b pb-4">
+      <p className="text-on-surface mb-2 text-sm" aria-live="polite">
+        {message}
+      </p>
+      <div
+        className="bg-fog h-1.5 w-full overflow-hidden rounded-full"
+        role="progressbar"
+        aria-label="Progress to free shipping"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={progress}
+      >
+        <div
+          className={`h-full rounded-full motion-safe:transition-[width] motion-safe:duration-300 ${remaining === 0 ? "bg-sage" : "bg-apricot"}`}
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
 function CartFooter() {
   const cart = useCart((state) => state.data);
   const pending = useCart((state) => state.pending);
@@ -331,6 +374,7 @@ export function CartDrawer() {
             </button>
           </div>
           <CartErrorBanner />
+          <FreeShippingMeter />
           <div className="flex-1 overflow-y-auto p-4">
             <CartLines />
           </div>

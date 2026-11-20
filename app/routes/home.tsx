@@ -21,7 +21,8 @@ import { formatPageTitle, getShopNameFromRootMatch } from "~/lib/storefront-shop
 
 import type { Route } from "./+types/home";
 
-// Homepage sections, top to bottom: hero (home_hero metaobject), how it works,
+// Homepage sections, top to bottom: hero (home_hero metaobject), shop by
+// category (collections "single-origin", "blends", "decaf", "brew-gear"), how it works,
 // bestsellers (collection "bestsellers"), find your coffee (collections
 // "espresso" and "filter"), subscription pitch, producers (producer
 // metaobjects), testimonials (testimonial metaobjects), journal (blog "journal").
@@ -71,6 +72,18 @@ const HOME_QUERY = gql(
             ...ProductCardQuickAdd
           }
         }
+      }
+      singleOrigin: collection(handle: "single-origin") {
+        ...BrewTile
+      }
+      blends: collection(handle: "blends") {
+        ...BrewTile
+      }
+      decaf: collection(handle: "decaf") {
+        ...BrewTile
+      }
+      brewGear: collection(handle: "brew-gear") {
+        ...BrewTile
       }
       espresso: collection(handle: "espresso") {
         ...BrewTile
@@ -178,6 +191,12 @@ export async function loader({ context }: Route.LoaderArgs) {
   return {
     hero: selectHomeHero(data?.hero ?? null, data?.fallbackImageProduct?.featuredImage ?? null),
     bestsellers: data?.bestsellers?.products.nodes ?? [],
+    categoryTiles: [
+      brewTile(data?.singleOrigin ?? null, "single-origin", "Single origins"),
+      brewTile(data?.blends ?? null, "blends", "Blends"),
+      brewTile(data?.decaf ?? null, "decaf", "Decaf"),
+      brewTile(data?.brewGear ?? null, "brew-gear", "Brew gear"),
+    ],
     brewTiles: [
       brewTile(data?.espresso ?? null, "espresso", "I brew espresso"),
       brewTile(data?.filter ?? null, "filter", "I brew filter"),
@@ -267,6 +286,51 @@ function HowItWorks() {
             </li>
           ))}
         </ol>
+      </div>
+    </section>
+  );
+}
+
+// Four even tiles straight under the hero, so shoppers can jump to a category
+// before scrolling. Product shots stay contained on paper to match the grid.
+function ShopByCategory({ tiles }: { tiles: LoaderData["categoryTiles"] }) {
+  return (
+    <section className="w-full pt-12 md:pt-16" aria-labelledby="categories-heading">
+      <div className="max-w-page px-margin mx-auto">
+        <h2 id="categories-heading" className="type-overline text-on-surface-secondary mb-4">
+          Shop by category
+        </h2>
+        <ul role="list" className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-6">
+          {tiles.map((tile) => (
+            <li key={tile.to}>
+              <Link
+                to={tile.to}
+                prefetch="intent"
+                className="group focus-visible:outline-accent flex flex-col gap-3 rounded-sm no-underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4"
+              >
+                <div className="rounded-card bg-surface-secondary border-border aspect-square overflow-hidden border">
+                  {tile.image ? (
+                    <img
+                      src={tile.image.url}
+                      alt=""
+                      loading="lazy"
+                      className="h-full w-full object-cover motion-safe:transition-transform motion-safe:duration-500 group-hover:scale-[1.04]"
+                    />
+                  ) : null}
+                </div>
+                <h3 className="type-heading-sm text-on-surface flex items-center justify-between gap-2">
+                  {tile.label}
+                  <span
+                    aria-hidden="true"
+                    className="motion-safe:transition-transform group-hover:translate-x-1"
+                  >
+                    →
+                  </span>
+                </h3>
+              </Link>
+            </li>
+          ))}
+        </ul>
       </div>
     </section>
   );
@@ -529,6 +593,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
   return (
     <main className="flex-1" id="main-content" tabIndex={-1}>
       <HomeHero hero={loaderData.hero} />
+      <ShopByCategory tiles={loaderData.categoryTiles} />
       <HowItWorks />
       <Bestsellers products={loaderData.bestsellers} />
       <FindYourCoffee tiles={loaderData.brewTiles} />

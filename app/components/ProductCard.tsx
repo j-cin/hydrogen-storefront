@@ -3,7 +3,7 @@ import { Link } from "react-router";
 
 import { useCartForm } from "~/lib/cart";
 import { openCartDrawer } from "~/lib/cart-drawer";
-import { compareMoney, formatPrice } from "~/lib/money";
+import { compareMoney, formatPrice, salePercent } from "~/lib/money";
 
 export const PRODUCT_CARD_FRAGMENT = gql(`
   fragment ProductCard on Product {
@@ -80,7 +80,14 @@ export function ProductCard({ product, priority = false, quickAdd }: ProductCard
   const price = product.priceRange.minVariantPrice;
   const compareAt = product.compareAtPriceRange.minVariantPrice;
   const onSale = compareMoney(compareAt, price) > 0;
-  const badge = !product.availableForSale ? "Sold out" : onSale ? "Sale" : null;
+  const percentOff = onSale ? salePercent(price, compareAt) : null;
+  const badge = !product.availableForSale
+    ? "Sold out"
+    : onSale
+      ? percentOff
+        ? `Save ${percentOff}%`
+        : "Sale"
+      : null;
   const badgeClass = !product.availableForSale ? "badge-soldout" : "badge-sale";
 
   return (
