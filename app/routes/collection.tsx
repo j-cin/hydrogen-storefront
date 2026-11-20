@@ -24,6 +24,7 @@ import { loadCollectionPage } from "~/lib/collection";
 import { storefrontClientContext } from "~/lib/storefront";
 import { formatPageTitle, getShopNameFromRootMatch } from "~/lib/storefront-shop";
 
+import { GiftsIntro, GiftsOptions, GIFTS_COLLECTION_HANDLE } from "~/components/GiftsCollection";
 import type { Route } from "./+types/collection";
 
 export function meta({ matches }: Route.MetaArgs) {
@@ -254,6 +255,7 @@ function CollectionResults({ loaderData }: { loaderData: Route.ComponentProps["l
 export default function CollectionRoute({ loaderData }: Route.ComponentProps) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const isGifts = loaderData.collection.handle === GIFTS_COLLECTION_HANDLE;
   return (
     <CollectionProvider
       data={{ handle: loaderData.collection.handle, dataSearch: loaderData.dataSearch }}
@@ -280,7 +282,16 @@ export default function CollectionRoute({ loaderData }: Route.ComponentProps) {
             origin={loaderData.origin}
           />
           <Breadcrumb collection={loaderData.collection} />
-          <CollectionHeader collection={loaderData.collection} />
+          {isGifts ? (
+            <GiftsIntro
+              title={loaderData.collection.title}
+              description={loaderData.collection.description}
+              collectionPath={loaderData.collectionPath}
+              currencyCode={loaderData.currencyCode}
+            />
+          ) : (
+            <CollectionHeader collection={loaderData.collection} />
+          )}
           <div className="lg:grid lg:grid-cols-[15rem_1fr] lg:gap-10">
             <aside className="hidden lg:block" aria-label="Filters">
               <div className="sticky top-8">
@@ -295,6 +306,7 @@ export default function CollectionRoute({ loaderData }: Route.ComponentProps) {
               <CollectionResults loaderData={loaderData} />
             </div>
           </div>
+          {isGifts ? <GiftsOptions /> : null}
         </div>
       </main>
     </CollectionProvider>
