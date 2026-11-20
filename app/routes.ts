@@ -13,6 +13,7 @@ export default [
   // FAQ entries come from faq_item metaobjects; the static path outranks :handle.
   route("pages/faq", "routes/faq.tsx"),
   route("pages/subscribe", "routes/subscribe.tsx"),
+  route("pages/our-story", "routes/our-story.tsx"),
   route("pages/:handle", "routes/page.tsx"),
   route("blogs/:blogHandle", "routes/blog.tsx"),
   route("blogs/:blogHandle/:articleHandle", "routes/article.tsx"),
