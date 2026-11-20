@@ -204,20 +204,29 @@ const textLinkClass =
 const primaryButtonClass =
   "rounded-button button-primary focus-visible:outline-accent inline-flex h-12 shrink-0 items-center justify-center px-7 text-base font-semibold no-underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 motion-safe:active:scale-[0.97]";
 
+function Overline({ children }: { children: string }) {
+  return <p className="type-overline text-on-surface-secondary mb-2">{children}</p>;
+}
+
 function SectionHeader({
   id,
+  overline,
   title,
   link,
 }: {
   id: string;
+  overline: string;
   title: string;
   link?: { to: string; label: string };
 }) {
   return (
     <div className="mb-8 flex items-end justify-between gap-4">
-      <h2 id={id} className={sectionHeadingClass}>
-        {title}
-      </h2>
+      <div>
+        <Overline>{overline}</Overline>
+        <h2 id={id} className={sectionHeadingClass}>
+          {title}
+        </h2>
+      </div>
       {link ? (
         <Link to={link.to} className={textLinkClass} prefetch="intent">
           {link.label}
@@ -238,6 +247,7 @@ function HowItWorks() {
   return (
     <section className="w-full py-16 md:py-20" aria-labelledby="how-heading">
       <div className="max-w-page px-margin mx-auto">
+        <Overline>Fresh, every week</Overline>
         <h2 id="how-heading" className={`${sectionHeadingClass} mb-10`}>
           How it works
         </h2>
@@ -284,9 +294,12 @@ function Bestsellers({ products }: { products: LoaderData["bestsellers"] }) {
     >
       <div className="max-w-page px-margin mx-auto">
         <div className="mb-8 flex items-end justify-between gap-4">
-          <h2 id="bestsellers-heading" className={sectionHeadingClass}>
-            Bestsellers
-          </h2>
+          <div>
+            <Overline>Most loved</Overline>
+            <h2 id="bestsellers-heading" className={sectionHeadingClass}>
+              Bestsellers
+            </h2>
+          </div>
           <div className="flex items-center gap-2">
             <Link to="/collections/bestsellers" className={`${textLinkClass} me-2`} prefetch="intent">
               Shop all <span aria-hidden="true">→</span>
@@ -333,10 +346,16 @@ function Bestsellers({ products }: { products: LoaderData["bestsellers"] }) {
   );
 }
 
+const BREW_TILE_SUBTITLES: Record<string, string> = {
+  "I brew espresso": "Rich, sweet and built for milk.",
+  "I brew filter": "Bright, clear and full of fruit.",
+};
+
 function FindYourCoffee({ tiles }: { tiles: LoaderData["brewTiles"] }) {
   return (
     <section className="w-full py-16 md:py-20" aria-labelledby="find-heading">
       <div className="max-w-page px-margin mx-auto">
+        <Overline>Not sure where to start?</Overline>
         <h2 id="find-heading" className={`${sectionHeadingClass} mb-8`}>
           Find your coffee
         </h2>
@@ -346,24 +365,30 @@ function FindYourCoffee({ tiles }: { tiles: LoaderData["brewTiles"] }) {
               <Link
                 to={tile.to}
                 prefetch="intent"
-                className="group rounded-card bg-surface-secondary focus-visible:outline-accent relative flex aspect-[4/3] items-end overflow-hidden no-underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 md:aspect-[5/4]"
+                className="group rounded-card bg-surface border-border focus-visible:outline-accent relative flex aspect-[4/5] flex-col border justify-between overflow-hidden p-6 no-underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 sm:aspect-[5/4] md:aspect-[4/5] md:p-8 lg:aspect-[5/4]"
               >
+                {/* Product shots sit on cream, so they're fitted below the text, not behind it. */}
                 {tile.image ? (
-                  <>
-                    <img
-                      src={tile.image.url}
-                      alt=""
-                      loading="lazy"
-                      className="absolute inset-0 h-full w-full object-cover motion-safe:transition-transform motion-safe:duration-500 group-hover:scale-[1.03]"
-                    />
-                    <div className="overlay-hero pointer-events-none absolute inset-0" aria-hidden="true" />
-                  </>
+                  <img
+                    src={tile.image.url}
+                    alt=""
+                    loading="lazy"
+                    className="absolute inset-x-0 top-24 bottom-0 h-[calc(100%-6rem)] w-full object-contain object-bottom motion-safe:transition-transform motion-safe:duration-500 group-hover:scale-[1.03]"
+                  />
                 ) : null}
+                <span className="text-on-surface relative z-10">
+                  <span className="type-heading-lg block">{tile.label}</span>
+                  {BREW_TILE_SUBTITLES[tile.label] ? (
+                    <span className="type-body mt-1 block opacity-90">
+                      {BREW_TILE_SUBTITLES[tile.label]}
+                    </span>
+                  ) : null}
+                </span>
                 <span
-                  className={`type-heading-lg relative z-10 flex w-full items-center justify-between gap-4 p-6 md:p-8 ${tile.image ? "text-on-image" : "text-on-surface"}`}
+                  className="bg-paper text-on-surface relative z-10 inline-flex size-12 items-center justify-center self-end rounded-full shadow-sm motion-safe:transition-transform group-hover:translate-x-1"
+                  aria-hidden="true"
                 >
-                  {tile.label}
-                  <span aria-hidden="true">→</span>
+                  →
                 </span>
               </Link>
             </li>
@@ -376,11 +401,11 @@ function FindYourCoffee({ tiles }: { tiles: LoaderData["brewTiles"] }) {
 
 function SubscriptionPitch() {
   return (
-    <section className="px-margin w-full" aria-labelledby="subscribe-heading">
-      <div className="max-w-page bg-on-surface text-surface rounded-card mx-auto flex flex-col items-start gap-6 px-6 py-12 md:flex-row md:items-center md:justify-between md:px-12 md:py-16">
+    <section className="bg-on-surface text-surface w-full" aria-labelledby="subscribe-heading">
+      <div className="max-w-page px-margin mx-auto flex flex-col items-start gap-8 py-20 md:flex-row md:items-end md:justify-between md:py-28">
         <div>
           <p className="type-overline text-surface/75 mb-3">Subscriptions</p>
-          <h2 id="subscribe-heading" className="type-heading-xl max-w-xl">
+          <h2 id="subscribe-heading" className="type-display max-w-2xl">
             Never run out. Save 10%, skip or cancel anytime.
           </h2>
         </div>
@@ -399,6 +424,7 @@ function MeetTheProducers({ producers }: { producers: LoaderData["producers"] })
       <div className="max-w-page px-margin mx-auto">
         <SectionHeader
           id="producers-heading"
+          overline="Traceable to the farm"
           title="Meet the producers"
           link={{ to: "/producers", label: "All producers" }}
         />
@@ -454,6 +480,7 @@ function FromTheJournal({ journal }: { journal: LoaderData["journal"] }) {
       <div className="max-w-page px-margin mx-auto">
         <SectionHeader
           id="journal-heading"
+          overline="Brew guides and origin trips"
           title="From the journal"
           link={{ to: `/blogs/${journal.handle}`, label: "Read the journal" }}
         />

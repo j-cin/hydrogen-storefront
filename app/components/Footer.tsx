@@ -16,6 +16,10 @@ const linkClass =
 const fieldClass =
   "rounded-input border-surface/40 bg-on-surface text-surface placeholder:text-surface/60 focus-visible:outline-apricot min-h-touch-target w-full border px-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2";
 
+// Underlined email field: bottom border only, label-as-placeholder look.
+const underlineFieldClass =
+  "border-surface/50 text-surface placeholder:text-surface/60 focus-visible:border-surface min-h-touch-target w-full rounded-none border-0 border-b bg-transparent px-0 text-base focus-visible:outline-none";
+
 export function Footer({
   menu,
   policies,
@@ -33,27 +37,30 @@ export function Footer({
 
   return (
     <footer className="bg-on-surface text-surface w-full">
-      <div className="max-w-page px-margin mx-auto pt-16 pb-10 text-sm">
-        <div className="grid grid-cols-2 gap-10 md:grid-cols-4 lg:grid-cols-[repeat(3,minmax(0,1fr))_minmax(0,1.5fr)]">
-          {columns.map((column) => (
-            <FooterColumn key={column.id} column={column} />
-          ))}
-          <div className="col-span-2 md:col-span-4 lg:col-span-1">
-            <NewsletterForm />
-          </div>
-        </div>
-
-        <div className="border-surface/20 mt-14 flex flex-col gap-6 border-t pt-8 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex flex-wrap items-center gap-x-8 gap-y-4">
+      <div className="max-w-page px-margin mx-auto pt-20 pb-10 text-sm">
+        <div className="grid gap-14 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-20">
+          <div className="max-w-md">
             <Link
               to="/"
               aria-label="Morrow Coffee Roasters home"
-              className="focus-visible:outline-apricot rounded-sm text-surface no-underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4"
+              className="focus-visible:outline-apricot text-surface inline-block rounded-sm no-underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4"
             >
-              <Logo className="text-[1.75rem]" />
+              <Logo className="text-[2.5rem]" />
             </Link>
-            <CountrySelector markets={markets} currentMarket={currentMarket} />
+            <div className="mt-10">
+              <NewsletterForm />
+            </div>
           </div>
+          <div className="grid grid-cols-2 gap-x-8 gap-y-12 sm:grid-cols-3">
+            {columns.map((column) => (
+              <FooterColumn key={column.id} column={column} />
+            ))}
+          </div>
+        </div>
+
+        <div className="border-surface/20 mt-20 flex flex-col gap-6 border-t pt-8 lg:flex-row lg:items-center lg:justify-between">
+          <p className="text-surface/75">© {new Date().getFullYear()} Morrow Coffee Roasters</p>
+          <CountrySelector markets={markets} currentMarket={currentMarket} />
           {policies.length > 0 ? (
             <nav aria-label="Policies">
               <ul role="list" className="flex flex-wrap gap-x-6">
@@ -77,7 +84,7 @@ function FooterColumn({ column }: { column: NavItem }) {
   const headingId = useId();
   return (
     <nav aria-labelledby={headingId}>
-      <h2 id={headingId} className="type-overline text-surface mb-3 font-semibold">
+      <h2 id={headingId} className="type-heading-sm text-surface mb-4">
         {column.title}
       </h2>
       <ul role="list" className="flex flex-col">
@@ -100,18 +107,15 @@ function NewsletterForm() {
 
   return (
     <section aria-labelledby={`${inputId}-heading`}>
-      <h2 id={`${inputId}-heading`} className="type-overline text-surface mb-3 font-semibold">
-        Newsletter
-      </h2>
-      <p className="text-surface/75 type-body mb-4 max-w-sm">
+      <h2 id={`${inputId}-heading`} className="type-heading-md text-surface mb-8 max-w-sm">
         One email a fortnight. New coffees, no spam.
-      </p>
+      </h2>
       {result?.ok ? (
         <p role="status" className="text-surface type-body">
           You're on the list. See you in a fortnight.
         </p>
       ) : (
-        <fetcher.Form method="post" action="/newsletter" className="flex max-w-md gap-2">
+        <fetcher.Form method="post" action="/newsletter" className="flex max-w-md flex-col items-start gap-6">
           <label htmlFor={inputId} className="sr-only">
             Email address
           </label>
@@ -124,12 +128,12 @@ function NewsletterForm() {
             placeholder="you@example.com"
             aria-invalid={result && !result.ok ? true : undefined}
             aria-describedby={result && !result.ok ? messageId : undefined}
-            className={fieldClass}
+            className={underlineFieldClass}
           />
           <button
             type="submit"
             disabled={submitting}
-            className="button-primary min-h-touch-target rounded-button shrink-0 cursor-pointer px-5 font-semibold disabled:opacity-60"
+            className="button-primary min-h-touch-target rounded-button shrink-0 cursor-pointer px-8 font-semibold disabled:opacity-60"
           >
             {submitting ? "Signing up…" : "Sign up"}
           </button>
