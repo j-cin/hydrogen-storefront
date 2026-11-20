@@ -9,10 +9,10 @@ import { formatPageTitle, getShopNameFromRootMatch } from "~/lib/storefront-shop
 import type { Route } from "./+types/producer";
 
 // Reads a `producer` metaobject (Settings > Custom data > Metaobjects) with
-// Storefront API access enabled. Expected fields:
-//   name (single line text, display name) · country · region (single line text)
-//   altitude (single line text, e.g. "1,850 m") · varieties (single line text)
-//   story (rich text; plain multi-line text also works) · image (file reference, image)
+// Storefront API access enabled. Fields:
+//   name · farm_or_station · region · country · altitude (single line text)
+//   story (rich text; plain multi-line text also works) · photo (file reference, image)
+//   working_with_since (integer year)
 const PRODUCER_QUERY = gql(`
   query Producer($handle: String!, $country: CountryCode, $language: LanguageCode)
   @inContext(country: $country, language: $language) {
@@ -31,13 +31,16 @@ const PRODUCER_QUERY = gql(`
       altitude: field(key: "altitude") {
         value
       }
-      varieties: field(key: "varieties") {
+      farmOrStation: field(key: "farm_or_station") {
+        value
+      }
+      workingWithSince: field(key: "working_with_since") {
         value
       }
       story: field(key: "story") {
         value
       }
-      image: field(key: "image") {
+      photo: field(key: "photo") {
         reference {
           ... on MediaImage {
             image {
@@ -62,8 +65,8 @@ export async function loader({ context, params, request }: Route.LoaderArgs) {
   if (!producer) throw new Response("Producer not found", { status: 404 });
 
   const image =
-    producer.image?.reference && "image" in producer.image.reference
-      ? producer.image.reference.image
+    producer.photo?.reference && "image" in producer.photo.reference
+      ? producer.photo.reference.image
       : null;
 
   // `story` is a rich_text_field (JSON). Older entries may still be plain
@@ -77,10 +80,18 @@ export async function loader({ context, params, request }: Route.LoaderArgs) {
       handle: producer.handle,
       name: producer.name?.value ?? producer.handle,
       facts: [
-        { label: "Country", value: producer.country?.value },
+        // Skipped when it only repeats the producer's name (e.g. a washing station).
+        {
+          label: "Farm or station",
+          value:
+            producer.farmOrStation?.value !== producer.name?.value
+              ? producer.farmOrStation?.value
+              : null,
+        },
         { label: "Region", value: producer.region?.value },
+        { label: "Country", value: producer.country?.value },
         { label: "Altitude", value: producer.altitude?.value },
-        { label: "Varieties", value: producer.varieties?.value },
+        { label: "Working with Morrow since", value: producer.workingWithSince?.value },
       ].filter((fact): fact is { label: string; value: string } => Boolean(fact.value)),
       storyRichText: isRichText ? storyValue : null,
       storyParagraphs: isRichText ? [] : toParagraphs(storyValue),

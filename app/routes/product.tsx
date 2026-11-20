@@ -530,6 +530,8 @@ function PriceBlock({
   );
 }
 
+const LOW_STOCK_THRESHOLD = 10;
+
 function InventoryHint({ selectedVariant }: { selectedVariant: ProductVariant | null }) {
   if (!selectedVariant) return null;
   if (!selectedVariant.availableForSale) {
@@ -546,8 +548,10 @@ function InventoryHint({ selectedVariant }: { selectedVariant: ProductVariant | 
     );
   }
 
+  // quantityAvailable needs the Storefront API's unauthenticated_read_product_inventory
+  // scope; without it the value is null and no hint shows.
   const quantity = selectedVariant.quantityAvailable;
-  if (quantity == null || quantity > 5) return null;
+  if (quantity == null || quantity > LOW_STOCK_THRESHOLD) return null;
 
   return (
     <div className="mt-3">

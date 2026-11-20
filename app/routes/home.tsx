@@ -8,6 +8,11 @@ import {
 } from "~/components/CollectionCard";
 import { HomeHero } from "~/components/HomeHero";
 import { ProductCard, PRODUCT_CARD_FRAGMENT, type ProductCardData } from "~/components/ProductCard";
+import {
+  Testimonials,
+  TESTIMONIAL_FRAGMENT,
+  type TestimonialData,
+} from "~/components/Testimonials";
 import { HOME_HERO, selectHomeHero } from "~/lib/home-hero";
 import { storefrontClientContext } from "~/lib/storefront";
 import { formatPageTitle, getShopNameFromRootMatch } from "~/lib/storefront-shop";
@@ -40,9 +45,14 @@ const HOME_QUERY = gql(
           altText
         }
       }
+      testimonials: metaobjects(type: "testimonial", first: 4) {
+        nodes {
+          ...Testimonial
+        }
+      }
     }
   `,
-  [PRODUCT_CARD_FRAGMENT, COLLECTION_CARD_FRAGMENT],
+  [PRODUCT_CARD_FRAGMENT, COLLECTION_CARD_FRAGMENT, TESTIMONIAL_FRAGMENT],
 );
 
 export function meta({ matches }: Route.MetaArgs) {
@@ -75,10 +85,13 @@ export async function loader({ context }: Route.LoaderArgs) {
     product: data?.heroProduct ?? null,
   });
 
+  const testimonials: TestimonialData[] = data?.testimonials.nodes ?? [];
+
   return {
     featuredProducts,
     featuredCollections,
     hero,
+    testimonials,
   };
 }
 
@@ -159,6 +172,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
     <main className="flex-1" id="main-content" tabIndex={-1}>
       <HomeHero hero={loaderData.hero} />
       <NewArrivals products={loaderData.featuredProducts} />
+      <Testimonials testimonials={loaderData.testimonials} />
       <ShopByCategory collections={loaderData.featuredCollections} />
     </main>
   );

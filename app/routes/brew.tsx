@@ -1,39 +1,36 @@
 import { gql } from "@shopify/hydrogen";
 
 import { Breadcrumb } from "~/components/Breadcrumb";
-import { toLines } from "~/lib/metaobject";
+import { RichText } from "~/components/RichText";
 import { storefrontClientContext } from "~/lib/storefront";
 import { formatPageTitle, getShopNameFromRootMatch } from "~/lib/storefront-shop";
 
 import type { Route } from "./+types/brew";
 
-// Lists `brew_guide` metaobjects with Storefront API access enabled. Expected fields:
-//   name (single line text, display name) · method (single line text, e.g. "Pour-over")
-//   dose · water · grind · time (single line text, e.g. "15 g", "250 g at 94°C")
-//   steps (multi-line text, one step per line)
-const BREW_GUIDES_QUERY = gql(`
-  query BrewGuides($country: CountryCode, $language: LanguageCode)
+// Lists `brew_recipe` metaobjects with Storefront API access enabled. Fields:
+//   method (single line text, display name, e.g. "Pour-over")
+//   dose_g · water_g (integer grams) · grind · brew_time (single line text)
+//   steps (rich text, usually an ordered list)
+const BREW_RECIPES_QUERY = gql(`
+  query BrewRecipes($country: CountryCode, $language: LanguageCode)
   @inContext(country: $country, language: $language) {
-    metaobjects(type: "brew_guide", first: 50, sortKey: "display_name") {
+    metaobjects(type: "brew_recipe", first: 50, sortKey: "display_name") {
       nodes {
         id
         handle
-        name: field(key: "name") {
-          value
-        }
         method: field(key: "method") {
           value
         }
-        dose: field(key: "dose") {
+        doseG: field(key: "dose_g") {
           value
         }
-        water: field(key: "water") {
+        waterG: field(key: "water_g") {
           value
         }
         grind: field(key: "grind") {
           value
         }
-        time: field(key: "time") {
+        brewTime: field(key: "brew_time") {
           value
         }
         steps: field(key: "steps") {
@@ -44,22 +41,30 @@ const BREW_GUIDES_QUERY = gql(`
   }
 `);
 
+function ratio(dose: string | null | undefined, water: string | null | undefined) {
+  const d = Number(dose);
+  const w = Number(water);
+  if (!d || !w) return null;
+  const r = w / d;
+  return `1:${Number.isInteger(r) ? r : r.toFixed(1)}`;
+}
+
 export async function loader({ context, request }: Route.LoaderArgs) {
   const storefrontClient = context.get(storefrontClientContext);
-  const { data } = await storefrontClient.graphql(BREW_GUIDES_QUERY);
+  const { data } = await storefrontClient.graphql(BREW_RECIPES_QUERY);
 
-  const guides = (data?.metaobjects.nodes ?? []).map((guide) => ({
-    id: guide.id,
-    handle: guide.handle,
-    name: guide.name?.value ?? guide.handle,
-    method: guide.method?.value ?? null,
+  const guides = (data?.metaobjects.nodes ?? []).map((recipe) => ({
+    id: recipe.id,
+    handle: recipe.handle,
+    name: recipe.method?.value ?? recipe.handle,
     recipe: [
-      { label: "Coffee", value: guide.dose?.value },
-      { label: "Water", value: guide.water?.value },
-      { label: "Grind", value: guide.grind?.value },
-      { label: "Time", value: guide.time?.value },
+      { label: "Coffee", value: recipe.doseG?.value ? `${recipe.doseG.value} g` : null },
+      { label: "Water", value: recipe.waterG?.value ? `${recipe.waterG.value} g` : null },
+      { label: "Ratio", value: ratio(recipe.doseG?.value, recipe.waterG?.value) },
+      { label: "Grind", value: recipe.grind?.value },
+      { label: "Time", value: recipe.brewTime?.value },
     ].filter((item): item is { label: string; value: string } => Boolean(item.value)),
-    steps: toLines(guide.steps?.value),
+    steps: recipe.steps?.value ?? null,
   }));
 
   return { guides, origin: new URL(request.url).origin };
@@ -99,14 +104,11 @@ export default function BrewRoute({ loaderData }: Route.ComponentProps) {
                   aria-labelledby={`${guide.handle}-title`}
                   className="border-border bg-surface-raised rounded-card h-full scroll-mt-24 border p-6"
                 >
-                  {guide.method ? (
-                    <p className="type-overline text-on-surface-secondary mb-1">{guide.method}</p>
-                  ) : null}
                   <h2 id={`${guide.handle}-title`} className="type-heading-md text-on-surface mb-4">
                     {guide.name}
                   </h2>
                   {guide.recipe.length > 0 ? (
-                    <dl className="mb-6 grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4">
+                    <dl className="mb-6 grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3">
                       {guide.recipe.map((item) => (
                         <div key={item.label}>
                           <dt className="text-on-surface-secondary text-sm">{item.label}</dt>
@@ -115,13 +117,10 @@ export default function BrewRoute({ loaderData }: Route.ComponentProps) {
                       ))}
                     </dl>
                   ) : null}
-                  {guide.steps.length > 0 ? (
-                    <ol className="text-on-surface type-body list-decimal space-y-2 ps-5">
-                      {guide.steps.map((step, index) => (
-                        <li key={index}>{step}</li>
-                      ))}
-                    </ol>
-                  ) : null}
+                  <RichText
+                    value={guide.steps}
+                    className="richtext text-on-surface type-body [&_ol]:list-decimal [&_ol]:space-y-2 [&_ol]:ps-5"
+                  />
                 </article>
               </li>
             ))}

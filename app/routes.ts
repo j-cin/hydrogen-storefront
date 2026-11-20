@@ -10,6 +10,8 @@ export default [
   route("collections/:handle", "routes/collection.tsx"),
   route("cart", "routes/cart.tsx"),
   route("search", "routes/search.tsx"),
+  // FAQ entries come from faq_item metaobjects; the static path outranks :handle.
+  route("pages/faq", "routes/faq.tsx"),
   route("pages/:handle", "routes/page.tsx"),
   route("blogs/:blogHandle", "routes/blog.tsx"),
   route("blogs/:blogHandle/:articleHandle", "routes/article.tsx"),
