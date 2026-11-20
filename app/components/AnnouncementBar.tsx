@@ -1,14 +1,29 @@
 import type { ReactElement } from "react";
 
+import { formatRoastDate } from "~/lib/roast-date";
+
 interface Announcement {
   content: ReactElement;
 }
 
-// Add announcements as JSX elements here.
+// Add announcements as JSX elements here. The next roast date always leads.
 const ANNOUNCEMENTS: Announcement[] = [];
 
-export function AnnouncementBar() {
-  if (ANNOUNCEMENTS.length === 0) return null;
+export function AnnouncementBar({ nextRoastDate }: { nextRoastDate: string }) {
+  const announcements: Announcement[] = [
+    {
+      content: (
+        <>
+          Next roast:{" "}
+          <time dateTime={nextRoastDate} className="type-stamp">
+            {formatRoastDate(nextRoastDate)}
+          </time>
+          . Order by Sunday night to get beans from this batch.
+        </>
+      ),
+    },
+    ...ANNOUNCEMENTS,
+  ];
 
   return (
     <div
@@ -17,7 +32,7 @@ export function AnnouncementBar() {
       className="bg-on-surface px-margin py-2.5 text-center"
     >
       <ul role="list">
-        {ANNOUNCEMENTS.map((announcement, index) => (
+        {announcements.map((announcement, index) => (
           <AnnouncementBarItem key={index} {...announcement} />
         ))}
       </ul>

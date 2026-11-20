@@ -24,25 +24,25 @@ export function HomeHero({ hero }: { hero: HomeHeroData }) {
               }}
               onError={() => setFailedImageUrl(image.url)}
             />
-            <div className="overlay-dark pointer-events-none absolute inset-0" aria-hidden="true" />
+            <div className="overlay-hero pointer-events-none absolute inset-0" aria-hidden="true" />
           </>
         ) : null}
         <div
-          className={`max-w-page px-margin relative z-10 mx-auto flex flex-col items-start justify-end ${image ? "text-interactive-text min-h-hero p-8 pb-12" : "text-on-surface py-16 md:py-20"}`}
+          className={`max-w-page px-margin relative z-10 mx-auto flex flex-col items-start justify-end ${image ? "text-on-image min-h-hero py-12 md:py-16" : "text-on-surface py-16 md:py-20"}`}
         >
           <h1 id="hero-heading" className="type-display max-w-2xl wrap-anywhere">
             {hero.heading}
           </h1>
           {hero.description ? (
-            <p className="type-body-lg mt-3 max-w-prose wrap-anywhere whitespace-pre-line opacity-90">
+            <p className="type-body-lg mt-4 max-w-xl wrap-anywhere whitespace-pre-line opacity-90">
               {hero.description}
             </p>
           ) : null}
           <Link
             to={hero.to}
-            className="rounded-button button-primary focus-visible:outline-accent mt-6 inline-flex h-11 shrink-0 items-center justify-center gap-2 px-5 text-sm font-medium no-underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 motion-safe:transition-[color,background-color,border-color,transform] motion-safe:active:scale-[0.97]"
+            className="rounded-button button-primary focus-visible:outline-accent mt-8 inline-flex h-12 shrink-0 items-center justify-center gap-2 px-7 text-base no-underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 motion-safe:active:scale-[0.97]"
           >
-            Shop now
+            {hero.cta}
           </Link>
         </div>
       </div>

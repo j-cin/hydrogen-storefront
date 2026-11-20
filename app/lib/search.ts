@@ -126,6 +126,15 @@ export async function loadSearchPage({
     };
   }
 
+  return runProductSearch(storefrontClient, url, searchTerm);
+}
+
+/** Runs a product search (filters, sort, cursor) from the URL's browse params. */
+async function runProductSearch(
+  storefrontClient: StorefrontClient,
+  url: URL,
+  searchTerm: string,
+): Promise<SearchPagePerformedData> {
   const browse = parseCollectionParams(url.searchParams);
   const after = url.searchParams.get("after") || undefined;
   const sortKey = browse.sortKey === "PRICE" ? "PRICE" : "RELEVANCE";
@@ -160,3 +169,4 @@ export async function loadSearchPage({
     origin: url.origin,
   };
 }
+

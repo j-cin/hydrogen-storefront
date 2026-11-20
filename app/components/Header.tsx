@@ -1,10 +1,12 @@
-import { useState } from "react";
 import { Link } from "react-router";
 
 import { useCart } from "~/lib/cart";
 import { CART_DRAWER_ID, SEARCH_DRAWER_ID, openDialogFromLinkClick } from "~/lib/cart-drawer";
+import type { NavItem } from "~/lib/menu";
 import type { StorefrontShop } from "~/lib/storefront-shop";
 
+import { Logo } from "./Logo";
+import { NavLink } from "./NavLink";
 import { MobileNav, MobileNavTrigger } from "./MobileNav";
 
 function cartCountLabel(count: number) {
@@ -19,13 +21,23 @@ function displayCount(count: number) {
   return count > 99 ? "99+" : String(count);
 }
 
-export function Header({ shopInfo }: { shopInfo: StorefrontShop }) {
+const desktopLinkClass =
+  "text-on-surface focus-visible:outline-accent shrink-0 rounded-sm text-sm font-normal whitespace-nowrap no-underline hover:opacity-70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 motion-safe:transition-opacity";
+
+// Used until the store's "main-menu" has items.
+export const FALLBACK_MENU: NavItem[] = [
+  { id: "fallback-shop", title: "Shop", to: "/collections/all", external: false, items: [] },
+  { id: "fallback-brew", title: "Brew guides", to: "/brew", external: false, items: [] },
+  { id: "fallback-journal", title: "Journal", to: "/blogs/journal", external: false, items: [] },
+];
+
+export function Header({ menu }: { shopInfo: StorefrontShop; menu: NavItem[] }) {
+  const items = menu.length > 0 ? menu : FALLBACK_MENU;
+
   const totalQuantity = useCart((state) => state.data.totalQuantity);
-  const [failedLogoUrl, setFailedLogoUrl] = useState<string | null>(null);
-  const logo = shopInfo.logo;
 
   return (
-    <header className="border-border bg-surface sticky top-0 z-40 border-b">
+    <header className="border-border/70 bg-surface/85 supports-[backdrop-filter]:bg-surface/75 sticky top-0 z-40 border-b backdrop-blur-md backdrop-saturate-150">
       <div
         className="max-w-page px-margin mx-auto flex h-16 w-full items-center justify-between"
         data-header-nav-group
@@ -36,26 +48,10 @@ export function Header({ shopInfo }: { shopInfo: StorefrontShop }) {
           </div>
           <Link
             to="/"
-            aria-label={shopInfo.name}
-            title={shopInfo.name}
-            className="text-on-surface focus-visible:outline-accent inline-flex max-w-48 min-w-0 items-center rounded-sm text-lg font-medium no-underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+            aria-label="Morrow Coffee Roasters home"
+            className="text-on-surface focus-visible:outline-accent inline-flex min-w-0 items-center rounded-sm pt-1 no-underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4"
           >
-            {logo && failedLogoUrl !== logo.url ? (
-              <img
-                src={logo.url}
-                alt={logo.altText ?? shopInfo.name}
-                width={logo.width ?? undefined}
-                height={logo.height ?? undefined}
-                className="h-auto max-h-10 w-auto max-w-full object-contain"
-                // An SSR image can fail before hydration attaches onError, so also check on mount.
-                ref={(img) => {
-                  if (img?.complete && img.naturalWidth === 0) setFailedLogoUrl(logo.url);
-                }}
-                onError={() => setFailedLogoUrl(logo.url)}
-              />
-            ) : (
-              <span className="line-clamp-2 leading-tight wrap-anywhere">{shopInfo.name}</span>
-            )}
+            <Logo className="text-[1.75rem]" />
           </Link>
         </div>
 
@@ -64,12 +60,9 @@ export function Header({ shopInfo }: { shopInfo: StorefrontShop }) {
           className="mx-8 hidden min-w-0 flex-1 items-center gap-8 overflow-x-auto md:flex"
           data-desktop-nav
         >
-          <Link
-            to="/collections"
-            className="text-on-surface focus-visible:outline-accent shrink-0 rounded-sm text-sm font-normal whitespace-nowrap no-underline hover:opacity-70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 motion-safe:transition-opacity"
-          >
-            Collections
-          </Link>
+          {items.map((item) => (
+            <NavLink key={item.id} item={item} className={desktopLinkClass} />
+          ))}
         </nav>
 
         <div className="flex shrink-0 items-center gap-0">
@@ -117,7 +110,7 @@ export function Header({ shopInfo }: { shopInfo: StorefrontShop }) {
           </span>
         </div>
       </div>
-      <MobileNav />
+      <MobileNav items={items} />
     </header>
   );
 }

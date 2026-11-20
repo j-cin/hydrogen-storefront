@@ -1,7 +1,14 @@
 import { AnalyticsEvent, getSortByValue } from "@shopify/hydrogen";
 import { CollectionProvider } from "@shopify/hydrogen/react";
 import { useEffect } from "react";
-import { Link, useLocation, useNavigate, useNavigation, useSearchParams } from "react-router";
+import {
+  Link,
+  redirect,
+  useLocation,
+  useNavigate,
+  useNavigation,
+  useSearchParams,
+} from "react-router";
 
 import {
   ActiveFilterChips,
@@ -30,12 +37,23 @@ export function meta({ matches }: Route.MetaArgs) {
   ];
 }
 
+// /collections/all is served by this route without a :handle param.
+const ALL_PRODUCTS_HANDLE = "shop-all";
+const ALL_PRODUCTS_PATH = "/collections/all";
+
 export async function loader({ context, params, request }: Route.LoaderArgs) {
-  const handle = params.handle;
-  if (!handle) throw new Response("Not Found", { status: 404 });
+  const url = new URL(request.url);
+  if (params.handle === ALL_PRODUCTS_HANDLE) {
+    throw redirect(`${ALL_PRODUCTS_PATH}${url.search}`, 301);
+  }
+  const handle = params.handle ?? ALL_PRODUCTS_HANDLE;
 
   const storefrontClient = context.get(storefrontClientContext);
-  return loadCollectionPage({ storefrontClient, handle, request });
+  const page = await loadCollectionPage({ storefrontClient, handle, request });
+  return {
+    ...page,
+    collectionPath: params.handle ? `/collections/${handle}` : ALL_PRODUCTS_PATH,
+  };
 }
 
 type CollectionData = Route.ComponentProps["loaderData"]["collection"];
@@ -54,7 +72,15 @@ function CollectionViewedTracker({ collection }: { collection: CollectionData })
   return null;
 }
 
-function BreadcrumbJsonLd({ collection, origin }: { collection: CollectionData; origin: string }) {
+function BreadcrumbJsonLd({
+  collection,
+  collectionPath,
+  origin,
+}: {
+  collection: CollectionData;
+  collectionPath: string;
+  origin: string;
+}) {
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
@@ -69,7 +95,7 @@ function BreadcrumbJsonLd({ collection, origin }: { collection: CollectionData; 
         "@type": "ListItem",
         position: 2,
         name: collection.title,
-        item: `${origin}/collections/${collection.handle}`,
+        item: `${origin}${collectionPath}`,
       },
     ],
   };
@@ -141,7 +167,7 @@ function ProductGrid({ products }: { products: readonly ProductNode[] }) {
         id="product-grid"
         data-testid="product-grid"
         role="list"
-        className="grid grid-cols-2 gap-x-1 gap-y-10 lg:grid-cols-3"
+        className="grid grid-cols-2 gap-x-4 gap-y-10 md:gap-x-6 md:gap-y-12 lg:grid-cols-3"
       >
         {products.map((product, index) => (
           <li key={`${product.handle}-${index}`}>
@@ -178,7 +204,7 @@ function CollectionResults({ loaderData }: { loaderData: Route.ComponentProps["l
     navigation.state === "loading" &&
     navigation.location?.pathname === location.pathname &&
     navigation.location.search !== location.search;
-  const collectionPath = `/collections/${loaderData.collection.handle}`;
+  const { collectionPath } = loaderData;
   const { nodes, pageInfo, isLoading, loadMore } = useLoadMore(
     loaderData.products,
     loaderData.pageInfo,
@@ -248,7 +274,11 @@ export default function CollectionRoute({ loaderData }: Route.ComponentProps) {
       <CollectionViewedTracker collection={loaderData.collection} />
       <main className="flex-1" id="main-content" tabIndex={-1}>
         <div className="max-w-page px-margin mx-auto w-full py-8 md:py-12">
-          <BreadcrumbJsonLd collection={loaderData.collection} origin={loaderData.origin} />
+          <BreadcrumbJsonLd
+            collection={loaderData.collection}
+            collectionPath={loaderData.collectionPath}
+            origin={loaderData.origin}
+          />
           <Breadcrumb collection={loaderData.collection} />
           <CollectionHeader collection={loaderData.collection} />
           <div className="lg:grid lg:grid-cols-[15rem_1fr] lg:gap-10">

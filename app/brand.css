@@ -1,0 +1,248 @@
+/*
+  Morrow Coffee Roasters brand layer (see BRAND.md).
+  Imported after tokens.css: the core tokens stay untouched and every value here
+  overrides them, so a template update to tokens.css won't wipe the brand.
+
+  Contrast (WCAG 2.1), checked against cream #F6F1E7 / paper #FFFDF8:
+    espresso text          14.4 / 15.9
+    roast secondary text    7.0 /  7.8
+    espresso on apricot     6.0  (primary buttons, sale badges)
+    espresso on sage        5.4  (decaf/organic/success badges)
+    apricot-deep focus ring 3.4 /  3.7  (non-text, needs 3:1)
+  Raw apricot on cream is only 2.4:1, so it is never used for text or rings.
+*/
+
+@theme {
+  /* Palette */
+  --color-cream: #f6f1e7;
+  --color-paper: #fffdf8;
+  --color-espresso: #2b1e16;
+  --color-roast: #6b4a35;
+  --color-apricot: #e8834a;
+  --color-apricot-deep: #d85e1b;
+  --color-sage: #8a9a7b;
+  --color-fog: #d9d2c5;
+
+  /* Surfaces */
+  --color-surface: var(--color-cream);
+  --color-surface-secondary: color-mix(in oklab, var(--color-cream) 55%, var(--color-fog));
+  --color-surface-raised: var(--color-paper);
+  --color-on-surface: var(--color-espresso);
+  --color-on-surface-secondary: var(--color-roast);
+  --color-border: var(--color-fog);
+  /* Form controls need a 3:1 boundary; fog is 1.3:1 on cream. */
+  --color-input-border: color-mix(in oklab, var(--color-roast) 75%, var(--color-cream));
+  /* Text over photography (hero, collection cards) sits on a dark overlay. */
+  --color-on-image: var(--color-paper);
+
+  /* Brand: apricot buttons with espresso text. Hover lightens rather than
+     darkens so the espresso label keeps (and gains) contrast. */
+  --color-primary: var(--color-apricot);
+  --color-interactive-hover: color-mix(in oklab, var(--color-apricot) 80%, white);
+  --color-interactive-active: color-mix(in oklab, var(--color-apricot) 88%, var(--color-espresso));
+  --color-interactive-text: var(--color-espresso);
+  --color-accent: var(--color-apricot-deep);
+
+  --color-button-secondary: var(--color-paper);
+  --color-button-outline-border: var(--color-espresso);
+  --color-button-outline-text: var(--color-espresso);
+
+  /* Commerce and states */
+  --color-sale: var(--color-apricot);
+  --color-success: var(--color-sage);
+  --color-badge-success-text: var(--color-espresso);
+  --color-badge-accent-text: var(--color-paper);
+
+  /* Overlays tinted espresso instead of pure black */
+  --color-overlay-strong: rgb(43 30 22 / 0.7);
+  --color-overlay-subtle: rgb(43 30 22 / 0.5);
+  --color-overlay-scrim: rgb(43 30 22 / 0.25);
+  --color-hover: rgb(43 30 22 / 0.04);
+
+  /* Softer, friendlier shapes */
+  --radius-button: 9999px;
+  --radius-card: 1rem;
+  --radius-input: 0.625rem;
+
+  /* Warm, diffuse shadows tinted espresso instead of flat grey-black. */
+  --shadow-sm: 0 1px 2px 0 rgb(43 30 22 / 0.06), 0 1px 3px 0 rgb(43 30 22 / 0.05);
+  --shadow: 0 2px 4px -1px rgb(43 30 22 / 0.06), 0 6px 16px -4px rgb(43 30 22 / 0.1);
+  --shadow-lg: 0 4px 8px -2px rgb(43 30 22 / 0.06), 0 16px 32px -8px rgb(43 30 22 / 0.14);
+  --shadow-xl: 0 24px 56px -12px rgb(43 30 22 / 0.28);
+
+  /* Typography (Google Fonts, loaded in root.tsx) */
+  --font-body: "Inter", system-ui, -apple-system, sans-serif;
+  --font-heading: "Fraunces", Georgia, serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+:root {
+  --type-heading-2xl-size: clamp(2.25rem, 1.6rem + 2.6vw, 3.5rem);
+  --type-heading-xl-size: clamp(1.875rem, 1.5rem + 1.5vw, 2.5rem);
+}
+
+@layer base {
+  body {
+    font-weight: 400;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
+
+  ::selection {
+    background: var(--color-apricot);
+    color: var(--color-espresso);
+  }
+
+  :focus-visible {
+    outline-color: var(--color-accent);
+  }
+}
+
+@layer components {
+  /* Headings: Fraunces 600, tight tracking. */
+  .type-display,
+  .type-heading-xl,
+  .type-heading-lg,
+  .type-heading-md,
+  .type-heading-sm {
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+  .type-display {
+    line-height: 1.1;
+    letter-spacing: -0.03em;
+  }
+
+  .button-primary,
+  .button-outline,
+  .button-secondary {
+    font-weight: 600;
+  }
+  .button-primary {
+    box-shadow: var(--shadow-sm);
+  }
+  .button-outline:hover {
+    background: var(--color-espresso);
+    color: var(--color-cream);
+  }
+
+  /* One smooth, eased motion for every button and inline link. */
+  @media (prefers-reduced-motion: no-preference) {
+    :is(.button-primary, .button-secondary, .button-outline, .button-ghost, .button-icon, .option-pill),
+    a {
+      transition-property: color, background-color, border-color, box-shadow, opacity, transform;
+      transition-duration: 200ms;
+      transition-timing-function: var(--ease-ui);
+    }
+    @media (hover: hover) {
+      .button-primary:hover {
+        box-shadow: var(--shadow);
+        transform: translateY(-1px);
+      }
+    }
+  }
+
+  /* Image overlays tinted espresso so photos stay warm. */
+  .overlay-dark {
+    background: linear-gradient(
+      to top,
+      rgb(43 30 22 / 0.78) 0%,
+      rgb(43 30 22 / 0.32) 55%,
+      rgb(43 30 22 / 0.04) 100%
+    );
+  }
+
+  /* Product image tile: every product sits on the same paper surface. */
+  .product-tile {
+    background: var(--color-paper);
+    border-radius: var(--radius-card);
+  }
+  /* Hairline drawn above the image: product shots bake in a cream background,
+     so a border underneath them would vanish and bags would look unframed. */
+  .product-tile::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    box-shadow: inset 0 0 0 1px rgb(43 30 22 / 0.08);
+    pointer-events: none;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .product-tile {
+      transition:
+        box-shadow 300ms var(--ease-ui),
+        transform 300ms var(--ease-ui);
+    }
+    @media (hover: hover) {
+      .group:hover .product-tile {
+        box-shadow: var(--shadow-lg);
+        transform: translateY(-2px);
+      }
+    }
+  }
+
+  /* Hero scrim: darkens the bottom AND the start edge, so the copy stays
+     readable whatever the featured collection image is. */
+  .overlay-hero {
+    background:
+      linear-gradient(to top, rgb(43 30 22 / 0.7) 0%, rgb(43 30 22 / 0) 60%),
+      linear-gradient(to right, rgb(43 30 22 / 0.75) 0%, rgb(43 30 22 / 0.35) 45%, rgb(43 30 22 / 0) 75%);
+  }
+  @media (max-width: 47.99rem) {
+    .overlay-hero {
+      background: linear-gradient(to top, rgb(43 30 22 / 0.85) 0%, rgb(43 30 22 / 0.45) 60%, rgb(43 30 22 / 0.15) 100%);
+    }
+  }
+
+  .badge-sale {
+    color: var(--color-espresso);
+    font-weight: 600;
+  }
+
+  /* Roast dates and SKUs: stamped-label feel. */
+  .type-stamp {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    letter-spacing: 0.02em;
+  }
+}
+
+@layer utilities {
+  .richtext h1,
+  .richtext h2,
+  .richtext h3,
+  .richtext h4,
+  .richtext h5,
+  .richtext h6 {
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+  /* Apricot fails text contrast on cream, so links stay espresso and underline. */
+  .richtext a {
+    color: var(--color-on-surface);
+    text-decoration-color: var(--color-apricot);
+    text-decoration-thickness: 2px;
+  }
+  .richtext a:hover {
+    text-decoration-color: currentColor;
+  }
+
+  /* Drawers use bg-surface-raised (paper); tint their backdrop espresso. */
+  .drawer-right::backdrop,
+  .drawer-left::backdrop {
+    background: var(--color-overlay-subtle);
+  }
+}

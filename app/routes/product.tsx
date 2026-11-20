@@ -8,12 +8,14 @@ import {
 } from "@shopify/hydrogen";
 import { ShopPayButton } from "@shopify/hydrogen/react";
 import { useEffect, useMemo, useState, type MouseEvent } from "react";
-import { Link, useLocation, useNavigate } from "react-router";
+import { Link, useLocation, useNavigate, useRouteLoaderData } from "react-router";
 
 import { ProductCard, PRODUCT_CARD_FRAGMENT } from "~/components/ProductCard";
+import { RichText } from "~/components/RichText";
 import { openCartDrawer } from "~/lib/cart-drawer";
 import { formatPrice, salePercent } from "~/lib/money";
 import { ProductProvider, useProductForm } from "~/lib/product";
+import { formatRoastDate } from "~/lib/roast-date";
 import { storefrontClientContext } from "~/lib/storefront";
 import { formatPageTitle, getShopNameFromRootMatch } from "~/lib/storefront-shop";
 
@@ -63,6 +65,114 @@ const PRODUCT_QUERY = gql(
         description
         descriptionHtml
         requiresSellingPlan
+        # Morrow coffee profile (custom.* product metafields, Storefront access enabled).
+        tastingNotes: metafield(namespace: "custom", key: "tasting_notes") {
+          value
+        }
+        roastLevel: metafield(namespace: "custom", key: "roast_level") {
+          value
+        }
+        process: metafield(namespace: "custom", key: "process") {
+          value
+        }
+        altitude: metafield(namespace: "custom", key: "altitude") {
+          value
+        }
+        varietals: metafield(namespace: "custom", key: "varietals") {
+          value
+        }
+        producer: metafield(namespace: "custom", key: "producer") {
+          reference {
+            ... on Metaobject {
+              handle
+              name: field(key: "name") {
+                value
+              }
+              farmOrStation: field(key: "farm_or_station") {
+                value
+              }
+              region: field(key: "region") {
+                value
+              }
+              country: field(key: "country") {
+                value
+              }
+              workingWithSince: field(key: "working_with_since") {
+                value
+              }
+              photo: field(key: "photo") {
+                reference {
+                  ... on MediaImage {
+                    image {
+                      url
+                      altText
+                      width
+                      height
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+        brewRecipes: metafield(namespace: "custom", key: "brew_recipes") {
+          references(first: 6) {
+            nodes {
+              ... on Metaobject {
+                handle
+                method: field(key: "method") {
+                  value
+                }
+                doseG: field(key: "dose_g") {
+                  value
+                }
+                waterG: field(key: "water_g") {
+                  value
+                }
+                grind: field(key: "grind") {
+                  value
+                }
+                brewTime: field(key: "brew_time") {
+                  value
+                }
+                steps: field(key: "steps") {
+                  value
+                }
+              }
+            }
+          }
+        }
+        pairsWith: metafield(namespace: "custom", key: "pairs_with") {
+          references(first: 4) {
+            nodes {
+              ... on Product {
+                ...ProductCard
+              }
+            }
+          }
+        }
+        sellingPlanGroups(first: 4) {
+          nodes {
+            name
+            sellingPlans(first: 6) {
+              nodes {
+                id
+                name
+                options {
+                  name
+                  value
+                }
+                priceAdjustments {
+                  adjustmentValue {
+                    ... on SellingPlanPercentagePriceAdjustment {
+                      adjustmentPercentage
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
         encodedVariantExistence
         encodedVariantAvailability
         featuredImage {
@@ -268,6 +378,10 @@ function galleryDotClass(active: boolean) {
   return "bg-on-surface/30 size-2 rounded-full";
 }
 
+function isWide(image: { width?: number | null; height?: number | null }) {
+  return Boolean(image.width && image.height && image.width / image.height > 1.2);
+}
+
 function ProductGallery({
   product,
   selectedVariant,
@@ -291,7 +405,7 @@ function ProductGallery({
       >
         <div
           data-product-gallery-track
-          className="flex snap-x snap-mandatory overflow-x-auto md:grid md:grid-cols-2 md:overflow-visible"
+          className="flex snap-x snap-mandatory overflow-x-auto md:grid md:grid-cols-2 md:gap-2 md:overflow-visible"
           style={{ scrollbarWidth: "none" }}
           tabIndex={0}
           onScroll={(event) => {
@@ -307,15 +421,17 @@ function ProductGallery({
               role="group"
               aria-roledescription="slide"
               aria-label={`Slide ${index + 1} of ${images.length}`}
-              className="w-full shrink-0 snap-center contain-paint md:w-auto md:shrink"
+              // The lead image spans the whole gallery; extra images sit two-up below it.
+              className={`w-full shrink-0 snap-center contain-paint md:w-auto md:shrink ${index === 0 ? "md:col-span-2" : ""}`}
             >
-              <div className="bg-surface-secondary aspect-square overflow-hidden">
+              <div className="bg-surface-secondary aspect-square overflow-hidden md:rounded-card">
                 <img
                   src={image.url}
                   alt={image.altText ?? product.title}
                   width={image.width ?? undefined}
                   height={image.height ?? undefined}
-                  className="h-full w-full object-cover"
+                  // Wide photos would lose their edges in the square frame, so fit them instead.
+                  className={`h-full w-full ${isWide(image) ? "object-contain" : "object-cover"}`}
                   loading={index === 0 ? "eager" : "lazy"}
                   fetchPriority={index === 0 ? "high" : "auto"}
                   data-testid={index === 0 ? "product-gallery-image" : undefined}
@@ -343,15 +459,47 @@ function ProductGallery({
   );
 }
 
+type SellingPlanOption = {
+  id: string;
+  groupName: string;
+  label: string;
+  percentOff: number;
+};
+
+function getSellingPlans(product: ProductData): SellingPlanOption[] {
+  return product.sellingPlanGroups.nodes.flatMap((group) =>
+    group.sellingPlans.nodes.map((plan) => {
+      const adjustment = plan.priceAdjustments[0]?.adjustmentValue;
+      const percentOff =
+        adjustment && "adjustmentPercentage" in adjustment ? adjustment.adjustmentPercentage : 0;
+      return {
+        id: plan.id,
+        groupName: group.name,
+        label: plan.options[0]?.value ? `Every ${plan.options[0].value}` : plan.name,
+        percentOff,
+      };
+    }),
+  );
+}
+
+function discounted<T extends { amount: string }>(price: T, percentOff: number): T {
+  if (!percentOff) return price;
+  return { ...price, amount: (Number(price.amount) * (1 - percentOff / 100)).toFixed(2) };
+}
+
 function PriceBlock({
   product,
   selectedVariant,
+  sellingPlan,
 }: {
   product: ProductData;
   selectedVariant: ProductVariant | null;
+  sellingPlan: SellingPlanOption | null;
 }) {
-  const price = selectedVariant?.price ?? product.priceRange.minVariantPrice;
-  const compareAt = selectedVariant?.compareAtPrice;
+  const basePrice = selectedVariant?.price ?? product.priceRange.minVariantPrice;
+  // A subscription discount shows like a sale: the plan price against the one-time price.
+  const price = sellingPlan ? discounted(basePrice, sellingPlan.percentOff) : basePrice;
+  const compareAt = sellingPlan?.percentOff ? basePrice : selectedVariant?.compareAtPrice;
   const percent = salePercent(price, compareAt);
 
   return (
@@ -359,7 +507,7 @@ function PriceBlock({
       <div className="inline-flex flex-wrap items-baseline gap-2">
         {compareAt && percent ? (
           <>
-            <span className="text-sale font-medium">
+            <span className="text-on-surface font-semibold">
               <span className="sr-only">Sale price: </span>
               {formatPrice(price)}
             </span>
@@ -367,7 +515,7 @@ function PriceBlock({
               <span className="sr-only">Regular price: </span>
               {formatPrice(compareAt)}
             </s>
-            <span className="text-sale text-sm font-medium" aria-label={`Save ${percent}%`}>
+            <span className="text-on-surface text-sm font-semibold" aria-label={`Save ${percent}%`}>
               (-{percent}%)
             </span>
           </>
@@ -381,6 +529,8 @@ function PriceBlock({
     </div>
   );
 }
+
+const LOW_STOCK_THRESHOLD = 10;
 
 function InventoryHint({ selectedVariant }: { selectedVariant: ProductVariant | null }) {
   if (!selectedVariant) return null;
@@ -398,8 +548,10 @@ function InventoryHint({ selectedVariant }: { selectedVariant: ProductVariant | 
     );
   }
 
+  // quantityAvailable needs the Storefront API's unauthenticated_read_product_inventory
+  // scope; without it the value is null and no hint shows.
   const quantity = selectedVariant.quantityAvailable;
-  if (quantity == null || quantity > 5) return null;
+  if (quantity == null || quantity > LOW_STOCK_THRESHOLD) return null;
 
   return (
     <div className="mt-3">
@@ -433,6 +585,11 @@ function VariantOptions({ product }: { product: ProductData }) {
   const swatches = useMemo(() => buildSwatchLookup(product), [product]);
   const location = useLocation();
   const baseParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
+
+  // Single-variant products only have Shopify's placeholder "Title: Default Title".
+  const isSingleVariant =
+    options.length === 1 && options[0]?.values.length === 1 && options[0].name === "Title";
+  if (isSingleVariant) return null;
 
   return (
     <div className="swatch-buttons space-y-4">
@@ -612,24 +769,106 @@ function QuantitySelector({
   );
 }
 
+function PurchaseOptions({
+  product,
+  plans,
+  selectedPlanId,
+  setSelectedPlanId,
+}: {
+  product: ProductData;
+  plans: SellingPlanOption[];
+  selectedPlanId: string;
+  setSelectedPlanId: (id: string) => void;
+}) {
+  if (plans.length === 0) return null;
+  const bestSaving = Math.max(...plans.map((plan) => plan.percentOff));
+  const subscribeLabel = bestSaving > 0 ? `Subscribe & save ${bestSaving}%` : "Subscribe";
+
+  // The cart reads `sellingPlanId` from the form data; an empty value means a one-time purchase.
+  return (
+    <fieldset className="mt-6 space-y-2">
+      <legend className="text-on-surface mb-2 text-sm font-medium">Purchase options</legend>
+      {product.requiresSellingPlan ? null : (
+        <label className="border-border flex cursor-pointer items-center gap-3 rounded-input border p-3 text-sm">
+          <input
+            type="radio"
+            name="sellingPlanId"
+            value=""
+            checked={selectedPlanId === ""}
+            onChange={() => setSelectedPlanId("")}
+            className="accent-apricot size-4"
+          />
+          <span className="text-on-surface font-semibold">One-time purchase</span>
+        </label>
+      )}
+      <div className="border-border rounded-input border p-3 text-sm">
+        <p className="text-on-surface mb-2 font-semibold">{subscribeLabel}</p>
+        <p className="text-on-surface-secondary mb-3">Ships free. Skip or cancel any time.</p>
+        <div className="flex flex-wrap gap-2">
+          {plans.map((plan) => (
+            <label
+              key={plan.id}
+              className={`option-pill focus-within:outline-accent cursor-pointer focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 ${selectedPlanId === plan.id ? "is-selected" : ""}`}
+            >
+              <input
+                type="radio"
+                name="sellingPlanId"
+                value={plan.id}
+                checked={selectedPlanId === plan.id}
+                onChange={() => setSelectedPlanId(plan.id)}
+                className="sr-only"
+              />
+              {plan.label}
+            </label>
+          ))}
+        </div>
+      </div>
+    </fieldset>
+  );
+}
+
 function AddToCart({
   product,
   quantity,
   setQuantity,
   selectedVariant,
+  plans,
+  selectedPlanId,
+  setSelectedPlanId,
 }: {
   product: ProductData;
   quantity: number;
   setQuantity: (quantity: number) => void;
   selectedVariant: ProductVariant | null;
+  plans: SellingPlanOption[];
+  selectedPlanId: string;
+  setSelectedPlanId: (id: string) => void;
 }) {
   const { options, register, formProps, errors, pending } = useProductForm();
-  const addable = canAddToCart(product, options);
-  const buttonText = addable ? "Add to cart" : selectedVariant ? "Sold out" : "Select options";
+  // canAddToCart() always refuses products that require a selling plan, so those
+  // become addable once the variant is in stock and a plan is chosen.
+  const addable = product.requiresSellingPlan
+    ? Boolean(selectedVariant?.availableForSale && selectedPlanId)
+    : canAddToCart(product, options);
+  const buttonText = !addable
+    ? selectedVariant?.availableForSale === false
+      ? "Sold out"
+      : selectedVariant
+        ? "Choose a delivery"
+        : "Select options"
+    : selectedPlanId
+      ? "Start subscription"
+      : "Add to cart";
 
   return (
     <>
       <form {...formProps({ afterSubmit: openCartDrawer })}>
+        <PurchaseOptions
+          product={product}
+          plans={plans}
+          selectedPlanId={selectedPlanId}
+          setSelectedPlanId={setSelectedPlanId}
+        />
         <div className="mt-6 mb-10 flex items-center gap-4">
           <QuantitySelector quantity={quantity} setQuantity={setQuantity} />
         </div>
@@ -643,7 +882,8 @@ function AddToCart({
           {buttonText}
         </button>
       </form>
-      {selectedVariant ? (
+      {/* Shop Pay's express button can't carry a selling plan, so it's one-time only. */}
+      {selectedVariant && !selectedPlanId ? (
         <div className="mt-3">
           <ShopPayButton
             variants={[{ id: selectedVariant.id, quantity }]}
@@ -684,6 +924,12 @@ function ProductInfo({
   selectedVariant: ProductVariant | null;
 }) {
   const [quantity, setQuantity] = useState(1);
+  const plans = useMemo(() => getSellingPlans(product), [product]);
+  // Subscription-only products start on their first plan; everything else starts one-time.
+  const [selectedPlanId, setSelectedPlanId] = useState(() =>
+    product.requiresSellingPlan ? (plans[0]?.id ?? "") : "",
+  );
+  const sellingPlan = plans.find((plan) => plan.id === selectedPlanId) ?? null;
 
   return (
     <div className="flex flex-col gap-6 md:sticky md:top-8 md:self-start">
@@ -694,17 +940,14 @@ function ProductInfo({
           </p>
         ) : null}
         <h1 className="type-display text-on-surface">{product.title}</h1>
-        <PriceBlock product={product} selectedVariant={selectedVariant} />
+        <TastingNotes product={product} />
+        <PriceBlock product={product} selectedVariant={selectedVariant} sellingPlan={sellingPlan} />
         <InventoryHint selectedVariant={selectedVariant} />
       </div>
 
       <span className="sr-only" aria-live="polite" id="inventory-status" />
 
-      {product.description ? (
-        <div className="type-body-sm text-on-surface-secondary leading-relaxed">
-          {product.description}
-        </div>
-      ) : null}
+      <CoffeeProfile product={product} />
 
       <div data-product-form>
         <span className="sr-only" aria-live="polite" data-add-to-cart-status />
@@ -714,6 +957,9 @@ function ProductInfo({
           quantity={quantity}
           setQuantity={setQuantity}
           selectedVariant={selectedVariant}
+          plans={plans}
+          selectedPlanId={selectedPlanId}
+          setSelectedPlanId={setSelectedPlanId}
         />
       </div>
 
@@ -740,6 +986,299 @@ function ProductInfo({
   );
 }
 
+// custom.roast_level is an integer from 1 (light) to 5 (dark).
+const ROAST_LABELS = ["Extra light", "Light", "Medium", "Medium-dark", "Dark"];
+
+function parseList(value: string | null | undefined): string[] {
+  if (!value) return [];
+  try {
+    const parsed: unknown = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.filter((item) => typeof item === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+function parseRoastLevel(value: string | null | undefined): number | null {
+  const level = Number.parseInt(value ?? "", 10);
+  return level >= 1 && level <= 5 ? level : null;
+}
+
+function TastingNotes({ product }: { product: ProductData }) {
+  const notes = parseList(product.tastingNotes?.value);
+  if (notes.length === 0) return null;
+
+  return (
+    // Plain descriptive text, not pills: bordered chips read as tappable controls
+    // next to the variant options and buttons below.
+    <div className="mt-3">
+      <h2 className="sr-only">Tasting notes</h2>
+      <ul role="list" className="type-body-lg text-on-surface-secondary flex flex-wrap items-center">
+        {notes.map((note, index) => (
+          <li key={note} className="inline-flex items-center">
+            {index > 0 ? (
+              <span className="bg-apricot mx-3 size-1.5 rounded-full" aria-hidden="true" />
+            ) : null}
+            {note}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function RoastMeter({ level }: { level: number }) {
+  const label = ROAST_LABELS[level - 1];
+  return (
+    <div>
+      <dt className="text-on-surface-secondary">Roast</dt>
+      <dd className="text-on-surface font-semibold">
+        <span>{label}</span>
+        <span className="sr-only">, {level} out of 5</span>
+        <span className="mt-1.5 flex gap-1.5" aria-hidden="true">
+          {ROAST_LABELS.map((step, index) => (
+            <span
+              key={step}
+              className={`size-2.5 rounded-full ${index < level ? "bg-roast" : "bg-fog"}`}
+            />
+          ))}
+        </span>
+      </dd>
+    </div>
+  );
+}
+
+type Producer = Extract<
+  NonNullable<NonNullable<ProductData["producer"]>["reference"]>,
+  { handle: string }
+>;
+
+function ProducerCard({ producer }: { producer: Producer }) {
+  const photo = producer.photo?.reference && "image" in producer.photo.reference
+    ? producer.photo.reference.image
+    : null;
+  const name = producer.name?.value ?? producer.handle;
+  const place = [producer.region?.value, producer.country?.value].filter(Boolean).join(", ");
+  const since = producer.workingWithSince?.value;
+  const farm = producer.farmOrStation?.value;
+
+  return (
+    <section
+      aria-labelledby="producer-card-heading"
+      className="bg-paper rounded-card border-border flex gap-4 border p-4"
+    >
+      {photo ? (
+        <img
+          src={photo.url}
+          alt={photo.altText ?? ""}
+          width={photo.width ?? undefined}
+          height={photo.height ?? undefined}
+          className="size-20 shrink-0 rounded-full object-cover"
+          loading="lazy"
+        />
+      ) : null}
+      <div className="flex min-w-0 flex-col gap-1 text-sm">
+        <p className="type-overline text-on-surface-secondary">Grown by</p>
+        <h2 id="producer-card-heading" className="type-heading-sm text-on-surface">
+          {name}
+        </h2>
+        {farm && farm !== name ? <p className="text-on-surface">{farm}</p> : null}
+        {place ? <p className="text-on-surface-secondary">{place}</p> : null}
+        {since ? (
+          <p className="text-on-surface-secondary">Working with Morrow since {since}</p>
+        ) : null}
+        <Link
+          to={`/producers/${producer.handle}`}
+          className="text-on-surface decoration-apricot mt-1 self-start font-semibold underline decoration-2 underline-offset-4 hover:decoration-current"
+        >
+          Meet the producer
+        </Link>
+      </div>
+    </section>
+  );
+}
+
+function CoffeeProfile({ product }: { product: ProductData }) {
+  const rootData = useRouteLoaderData<{ nextRoastDate?: string }>("root");
+  const roastLevel = parseRoastLevel(product.roastLevel?.value);
+  const varietals = parseList(product.varietals?.value);
+  const producer =
+    product.producer?.reference && "handle" in product.producer.reference
+      ? product.producer.reference
+      : null;
+  const specs = [
+    { label: "Process", value: product.process?.value },
+    // masl: metres above sea level. Higher farms grow slower, sweeter coffee.
+    { label: "Altitude", value: product.altitude?.value },
+    { label: "Varietals", value: varietals.join(", ") || null },
+  ].filter((spec): spec is { label: string; value: string } => Boolean(spec.value));
+
+  // Gear and merch have no coffee profile.
+  if (!roastLevel && specs.length === 0 && !producer) return null;
+
+  return (
+    <div className="border-border flex flex-col gap-5 border-y py-6">
+      <dl className="grid grid-cols-2 gap-x-6 gap-y-4 text-sm sm:grid-cols-3">
+        {roastLevel ? <RoastMeter level={roastLevel} /> : null}
+        {specs.map((spec) => (
+          <div key={spec.label}>
+            <dt className="text-on-surface-secondary">{spec.label}</dt>
+            <dd className="text-on-surface font-semibold">{spec.value}</dd>
+          </div>
+        ))}
+      </dl>
+      {producer ? <ProducerCard producer={producer} /> : null}
+      {rootData?.nextRoastDate ? (
+        <p className="type-stamp text-on-surface-secondary">
+          Next roast {formatRoastDate(rootData.nextRoastDate)}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+type BrewRecipe = {
+  handle: string;
+  method: string;
+  doseG: string | null;
+  waterG: string | null;
+  grind: string | null;
+  brewTime: string | null;
+  steps: string | null;
+};
+
+function getBrewRecipes(product: ProductData): BrewRecipe[] {
+  return (product.brewRecipes?.references?.nodes ?? []).flatMap((node) =>
+    "handle" in node && node.method?.value
+      ? [
+          {
+            handle: node.handle,
+            method: node.method.value,
+            doseG: node.doseG?.value ?? null,
+            waterG: node.waterG?.value ?? null,
+            grind: node.grind?.value ?? null,
+            brewTime: node.brewTime?.value ?? null,
+            steps: node.steps?.value ?? null,
+          },
+        ]
+      : [],
+  );
+}
+
+function brewRatio(recipe: BrewRecipe) {
+  const dose = Number(recipe.doseG);
+  const water = Number(recipe.waterG);
+  if (!dose || !water) return null;
+  const ratio = water / dose;
+  return `1:${Number.isInteger(ratio) ? ratio : ratio.toFixed(1)}`;
+}
+
+// WAI-ARIA tabs: arrow keys move between tabs, and only the active tab is in the tab order.
+function BrewRecipes({ product }: { product: ProductData }) {
+  const recipes = getBrewRecipes(product);
+  const [active, setActive] = useState(0);
+  if (recipes.length === 0) return null;
+  const current = recipes[Math.min(active, recipes.length - 1)]!;
+
+  const focusTab = (index: number) => {
+    const next = (index + recipes.length) % recipes.length;
+    setActive(next);
+    document.getElementById(`recipe-tab-${recipes[next]!.handle}`)?.focus();
+  };
+
+  const stats = [
+    { label: "Coffee", value: current.doseG ? `${current.doseG} g` : null },
+    { label: "Water", value: current.waterG ? `${current.waterG} g` : null },
+    { label: "Ratio", value: brewRatio(current) },
+    { label: "Grind", value: current.grind },
+    { label: "Time", value: current.brewTime },
+  ].filter((stat): stat is { label: string; value: string } => Boolean(stat.value));
+
+  return (
+    <section
+      aria-labelledby="brew-recipes-heading"
+      className="max-w-page px-margin mx-auto mb-16 w-full"
+    >
+      <h2 id="brew-recipes-heading" className="type-heading-xl mb-6">
+        How to brew it
+      </h2>
+      <div role="tablist" aria-label="Brew methods" className="border-border mb-6 flex gap-2 border-b">
+        {recipes.map((recipe, index) => {
+          const selected = recipe.handle === current.handle;
+          return (
+            <button
+              key={recipe.handle}
+              id={`recipe-tab-${recipe.handle}`}
+              type="button"
+              role="tab"
+              aria-selected={selected}
+              aria-controls={`recipe-panel-${recipe.handle}`}
+              tabIndex={selected ? 0 : -1}
+              onClick={() => setActive(index)}
+              onKeyDown={(event) => {
+                if (event.key === "ArrowRight") focusTab(index + 1);
+                else if (event.key === "ArrowLeft") focusTab(index - 1);
+                else if (event.key === "Home") focusTab(0);
+                else if (event.key === "End") focusTab(recipes.length - 1);
+                else return;
+                event.preventDefault();
+              }}
+              className={`min-h-touch-target -mb-px border-b-2 px-3 text-sm font-semibold focus-visible:outline-accent ${selected ? "border-apricot text-on-surface" : "text-on-surface-secondary hover:text-on-surface border-transparent"}`}
+            >
+              {recipe.method}
+            </button>
+          );
+        })}
+      </div>
+      <div
+        id={`recipe-panel-${current.handle}`}
+        role="tabpanel"
+        aria-labelledby={`recipe-tab-${current.handle}`}
+        tabIndex={0}
+        className="grid gap-8 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]"
+      >
+        <dl className="bg-paper rounded-card border-border grid grid-cols-2 gap-4 self-start border p-5 text-sm">
+          {stats.map((stat) => (
+            <div key={stat.label}>
+              <dt className="text-on-surface-secondary">{stat.label}</dt>
+              <dd className="text-on-surface font-semibold">{stat.value}</dd>
+            </div>
+          ))}
+        </dl>
+        <RichText
+          value={current.steps}
+          className="richtext text-on-surface [&_ol]:list-decimal [&_ol]:space-y-3 [&_ol]:ps-5"
+        />
+      </div>
+    </section>
+  );
+}
+
+function BrewItWith({ product }: { product: ProductData }) {
+  const products = (product.pairsWith?.references?.nodes ?? []).filter(
+    (node): node is RelatedProduct => "handle" in node,
+  );
+  if (products.length === 0) return null;
+
+  return (
+    <section
+      aria-labelledby="brew-it-with-heading"
+      className="max-w-page px-margin mx-auto mb-16 w-full"
+    >
+      <h2 id="brew-it-with-heading" className="type-heading-xl mb-6">
+        Brew it with
+      </h2>
+      <ul role="list" className="grid grid-cols-2 gap-x-4 gap-y-10 md:gap-x-6 lg:grid-cols-4">
+        {products.map((pairing) => (
+          <li key={pairing.handle}>
+            <ProductCard product={pairing} />
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 function ProductPageContent({ product }: { product: ProductData }) {
   const { selectedVariant } = useProductForm();
 
@@ -747,9 +1286,19 @@ function ProductPageContent({ product }: { product: ProductData }) {
     <section className="max-w-page px-margin mx-auto w-full pb-4">
       <div className="product-grid mb-16 grid grid-cols-1 gap-6 md:gap-12">
         <ProductGallery product={product} selectedVariant={selectedVariant} />
-        <ProductInfo product={product} selectedVariant={selectedVariant} />
+        {/* Keyed so quantity and plan choice reset when navigating to another product. */}
+        <ProductInfo key={product.id} product={product} selectedVariant={selectedVariant} />
       </div>
     </section>
+  );
+}
+
+function ProductExtras({ product }: { product: ProductData }) {
+  return (
+    <>
+      <BrewRecipes product={product} />
+      <BrewItWith product={product} />
+    </>
   );
 }
 
@@ -768,7 +1317,7 @@ function RelatedProducts({ products }: { products: RelatedProduct[] }) {
         <div className="max-w-page px-margin mx-auto contain-paint">
           <ul
             role="list"
-            className="grid grid-cols-1 gap-x-1 gap-y-10 md:grid-cols-2 lg:grid-cols-4"
+            className="grid grid-cols-2 gap-x-4 gap-y-10 md:gap-x-6 md:gap-y-12 lg:grid-cols-4"
           >
             {products.map((product) => (
               <li key={product.handle}>
@@ -809,6 +1358,7 @@ export default function ProductRoute({ loaderData }: Route.ComponentProps) {
       <ProductViewedTracker product={product} />
       <main className="flex-1" id="main-content" tabIndex={-1}>
         <ProductPageContent product={product} />
+        <ProductExtras product={product} />
         <RelatedProducts products={relatedProducts} />
       </main>
     </ProductProvider>
