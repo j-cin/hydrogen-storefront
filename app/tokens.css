@@ -849,6 +849,13 @@
   width: calc(100% + 2 * var(--spacing-margin) + max(0px, 100vw - var(--spacing-page)));
 }
 
+/* Pair with bleed-full on a scroll track: keeps the first and last items aligned
+   with the page content while the track itself runs to the viewport edges. */
+@utility bleed-inset {
+  padding-inline: calc(var(--spacing-margin) + max(0px, (100vw - var(--spacing-page)) / 2));
+  scroll-padding-inline: calc(var(--spacing-margin) + max(0px, (100vw - var(--spacing-page)) / 2));
+}
+
 @utility gallery-bleed-start {
   margin-inline-start: calc(
     -1 * var(--spacing-margin) - max(0px, (100vw - var(--spacing-page)) / 2)

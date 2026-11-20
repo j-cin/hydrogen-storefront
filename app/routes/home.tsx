@@ -315,7 +315,7 @@ function Bestsellers({ products }: { products: LoaderData["bestsellers"] }) {
           ref={trackRef}
           id="bestsellers-track"
           role="list"
-          className="-mx-margin px-margin scroll-px-margin flex snap-x snap-mandatory gap-4 overflow-x-auto pb-4 md:gap-6"
+          className="bleed-full bleed-inset flex snap-x snap-mandatory gap-4 overflow-x-auto pb-4 md:gap-6"
         >
           {products.map((product, index) => (
             <li
